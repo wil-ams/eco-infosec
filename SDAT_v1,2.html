@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCF DRAAI Assessment Tool (SDAT) v2.0 - Risk-Based (Standalone)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f3f4f6;
+        }
+        
+        /* DRAAI-Style Cards */
+        .draai-card {
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+        
+        /* Progress Bar */
+        .progress-container {
+            background: #e5e7eb;
+            height: 8px;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Step Indicator */
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e5e7eb;
+            color: #6b7280;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.5rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .step.active .step-circle {
+            background: #3b82f6;
+            color: white;
+        }
+        .step.completed .step-circle {
+            background: #10b981;
+            color: white;
+        }
+        .step-line {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: #e5e7eb;
+            z-index: -1;
+        }
+        .step:last-child .step-line {
+            display: none;
+        }
+        
+        /* Control Cards */
+        .control-card {
+            border-left: 4px solid #3b82f6;
+            transition: all 0.2s;
+        }
+        .control-card:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        /* Status Badges */
+        .status-voldoet { background: #d1fae5; color: #065f46; }
+        .status-deels { background: #fef3c7; color: #92400e; }
+        .status-niet { background: #fee2e2; color: #991b1b; }
+        .status-nvt { background: #e5e7eb; color: #374151; }
+        
+        /* Tags */
+        .tag-platform { background: #000; color: #fff; }
+        .tag-bouwblok { background: #dc2626; color: #fff; }
+        .tag-workload { background: #ea580c; color: #fff; }
+        .tag-soc { background: #16a34a; color: #fff; }
+        .tag-msm { background: #1e40af; color: #fff; }
+        .tag-risk { background: #6b7280; color: #fff; }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        /* Button Styles */
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+/* --- SDAT ITERATIE 2 STYLES --- */
+
+/* Status Selectors */
+.status-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+.status-option {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+.status-option:hover {
+    border-color: #3b82f6;
+    background: #f0f9ff;
+}
+.status-option.selected {
+    border-width: 2px;
+}
+/* Kleuren voor actieve status */
+.status-option[data-val="Voldoet"].selected { background: #d1fae5; border-color: #059669; color: #065f46; }
+.status-option[data-val="Deels"].selected { background: #fef3c7; border-color: #d97706; color: #92400e; }
+.status-option[data-val="Niet"].selected { background: #fee2e2; border-color: #dc2626; color: #991b1b; }
+.status-option[data-val="NVT"].selected { background: #f3f4f6; border-color: #4b5563; color: #1f2937; }
+
+/* Implementation Rows */
+.impl-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+.remove-row-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+/* Control Navigation */
+.control-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Tags Styling */
+.tag { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 0.25rem; font-weight: bold; margin-right: 0.25rem; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="draai-card p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">SCF DRAAI Assessment Tool</h1>
+                    <p class="text-gray-600 mt-1">Security Control Framework - Assessment & Peer Review</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-500">Versie 1.0</div>
+                    <div class="text-xs text-gray-400" id="session-info">Geen sessie geladen</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="draai-card p-4 mb-6" id="progress-container" style="display: none;">
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-semibold text-gray-700">Voortgang</span>
+                <span class="text-sm text-gray-600" id="progress-text">0%</span>
+            </div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="step-indicator" style="display: none;">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="text-xs font-semibold">Context</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="text-xs font-semibold">Controls</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="text-xs font-semibold">Register</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="text-xs font-semibold">Resultaten</div>
+                <div class="step-line"></div>
+            </div>
+            <div class="step" data-step="5">
+                <div class="step-circle">5</div>
+                <div class="text-xs font-semibold">Review</div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content">
+            <!-- Welcome Screen (Default) -->
+            <div id="welcome-screen">
+                <div class="draai-card p-8 text-center">
+                    <div class="text-6xl mb-4">🎯</div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Welkom bij SDAT</h2>
+                    <p class="text-gray-600 mb-6">
+                        Start een nieuwe assessment, peer review of hercertificering.<br>
+                        Of laad een bestaande sessie om verder te gaan.
+                    </p>
+                    <div class="flex gap-4 justify-center flex-wrap">
+                        <button onclick="openNewSessionModal()" class="btn-primary">
+                            ➕ Nieuwe Sessie
+                        </button>
+                        <button onclick="loadExistingSession()" class="btn-secondary">
+                            📂 Bestaande Sessie Laden
+                        </button>
+                        <button onclick="importJSON()" class="btn-secondary">
+                            📥 Importeer JSON
+                        </button>
+                    </div>
+                    
+                    <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 class="font-semibold text-blue-900 mb-2">💡 Wat kun je doen?</h3>
+                        <ul class="text-sm text-blue-800 text-left max-w-md mx-auto space-y-1">
+                            <li>• <strong>Assessment:</strong> Team vult controls in voor nieuw project</li>
+                            <li>• <strong>Peer Review:</strong> ISO reviewt ingevulde assessment</li>
+                            <li>• <strong>Hercertificering:</strong> BIO hervalidatie</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wizard Content (Hidden by default) -->
+            <div id="wizard-content" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- New Session Modal -->
+    <div id="new-session-modal" class="modal">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Nieuwe Sessie Starten</h2>
+            
+            <!-- Step 1: Session Type -->
+            <div id="modal-step-1">
+                <h3 class="font-semibold mb-3">Sessie Type</h3>
+                <div class="space-y-2 mb-6">
+                    <label class="block p-4 border-2 rounded-lg cursor-pointer hover:bg-blue-50 hover:border-blue-500">
+                        <input type="radio" name="session-type" value="assessment" class="mr-2" checked>
+                        <strong>Assessment</strong> - Team vult controls in
+                    </label>
+                    <label class="block p-4 border-2 rounded-lg cursor-pointer hover:bg-green-50 hover:border-green-500">
+                        <input type="radio" name="session-type" value="peer-review" class="mr-2">
+                        <strong>Peer Review</strong> - ISO reviewt ingevulde assessment
+                    </label>
+                    <label class="block p-4 border-2 rounded-lg cursor-pointer hover:bg-yellow-50 hover:border-yellow-500">
+                        <input type="radio" name="session-type" value="recert" class="mr-2">
+                        <strong>BIO Hercertificering</strong> - Hervalidatie bestaande controls
+                    </label>
+                </div>
+
+                <h3 class="font-semibold mb-3">Template Selecteren</h3>
+                <select id="template-selector" class="w-full p-3 border rounded-lg mb-6">
+                    <option value="">Laden...</option>
+                </select>
+
+                <h3 class="font-semibold mb-3">🎯 Quickscan Koppelen (Aanbevolen)</h3>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-3 text-sm">
+                    <p class="text-blue-900"><strong>Risk-Based Filtering:</strong> Koppel een Quickscan om alleen relevante controls te beoordelen op basis van BIV/BBN classificatie.</p>
+                </div>
+                <select id="quickscan-selector" class="w-full p-3 border rounded-lg mb-6">
+                    <option value="">Geen Quickscan (alle controls)</option>
+                </select>
+
+                <h3 class="font-semibold mb-3">Project Informatie</h3>
+                <div class="space-y-3 mb-6">
+                    <input type="text" id="project-name" placeholder="Project naam *" 
+                           class="w-full p-3 border rounded-lg">
+                    <input type="text" id="project-directie" placeholder="Directie/Team" 
+                           class="w-full p-3 border rounded-lg">
+                    <textarea id="project-description" placeholder="Beschrijving (optioneel)" 
+                              class="w-full p-3 border rounded-lg" rows="3"></textarea>
+                </div>
+
+                <h3 class="font-semibold mb-3">Wiki Import (Optioneel)</h3>
+                <div class="mb-6">
+                    <input type="file" id="wiki-file" accept=".txt,.md" 
+                           class="w-full p-3 border rounded-lg">
+                    <p class="text-xs text-gray-500 mt-1">Upload een .txt of .md bestand met context informatie</p>
+                </div>
+
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeNewSessionModal()" class="btn-secondary">
+                        Annuleren
+                    </button>
+                    <button onclick="createNewSession()" class="btn-primary">
+                        Sessie Starten
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <script>
+    'use strict';
+    
+    // ============= RISK PROFILE GENERATOR (INLINE) =============
+    /**
+     * Risk Profile Generator - Bridge tussen Quickscan en SDAT
+     * Versie 1.0 - 2026-01-16 (Inline version)
+     */
+    const RiskProfileGenerator = {
+        generateProfile(quickscanData) {
+            if (!quickscanData) {
+                console.warn('No Quickscan data provided');
+                return this.getDefaultProfile();
+            }
+            const classification = this.extractClassification(quickscanData);
+            const infrastructure = this.extractInfrastructure(quickscanData);
+            const riskLevel = this.calculateRiskLevel(classification);
+            return {
+                id: `PROFILE-${Date.now()}`,
+                quickscanId: quickscanData.id || 'unknown',
+                projectName: quickscanData.introductie?.projectInfo?.name || 'Onbekend Project',
+                created: new Date().toISOString(),
+                classification: classification,
+                infrastructure: infrastructure,
+                riskLevel: riskLevel,
+                controlFilters: this.generateControlFilters(classification, infrastructure, riskLevel),
+                metadata: {
+                    generatedBy: 'Risk Profile Generator v1.0',
+                    quickscanDate: quickscanData.introductie?.projectInfo?.startDate,
+                    directie: quickscanData.introductie?.projectInfo?.directie
+                }
+            };
+        },
+        extractClassification(quickscanData) {
+            const processes = quickscanData.introductie?.processes || [];
+            const classifications = [];
+            processes.forEach(process => {
+                const classKey = `process_${process.id}_classification_type`;
+                const classValue = quickscanData.classificatie?.[classKey];
+                if (classValue && classValue !== 'N.v.t.') classifications.push(classValue);
+            });
+            let maxBBN = 'BBN1';
+            if (classifications.some(c => c.includes('BBN2+'))) maxBBN = 'BBN2+';
+            else if (classifications.some(c => c.includes('BBN2'))) maxBBN = 'BBN2';
+            const biv = {
+                b: this.determineBIVLevel(quickscanData, 'b'),
+                i: this.determineBIVLevel(quickscanData, 'i'),
+                v: this.determineBIVLevel(quickscanData, 'v')
+            };
+            return {
+                bbn: maxBBN,
+                biv: biv,
+                hasPersoonsgegevens: this.hasDataType(quickscanData, 'persoonsgegevens'),
+                hasBijzonderePersoonsgegevens: this.hasDataType(quickscanData, 'bijzondere'),
+                publicFacing: this.isPublicFacing(quickscanData)
+            };
+        },
+        determineBIVLevel(quickscanData, type) { 
+            // TODO: Extract actual BIV from quickscanData.biv
+            // For now: conservative approach
+            return 'Hoog'; 
+        },
+        hasDataType(quickscanData, dataType) {
+            // Quickscan V2 slaat datatypes op bij infoSystems binnen processes
+            const processes = quickscanData.introductie?.processes || [];
+            
+            for (const process of processes) {
+                const infoSystems = process.infoSystems || [];
+                // Check if any info system processes this data type
+                // Note: Quickscan V2 doesn't store detailed dataTypes per system yet
+                // For now, check process classification
+                const classKey = `process_${process.id}_classification_type`;
+                const classValue = quickscanData.classificatie?.[classKey];
+                
+                if (classValue && classValue.toLowerCase().includes('persoonsgegeven')) {
+                    if (dataType === 'bijzondere' && classValue.includes('bijzondere')) return true;
+                    if (dataType === 'persoonsgegevens') return true;
+                }
+            }
+            return false;
+        },
+        isPublicFacing(quickscanData) {
+            // Check omstandigheden for public facing indicators
+            const omstandigheden = quickscanData.omstandigheden || {};
+            
+            // Look for indicators that system is public facing
+            for (const key in omstandigheden) {
+                const value = String(omstandigheden[key]).toLowerCase();
+                if (value.includes('publiek') || value.includes('extern') || value.includes('internet')) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        extractInfrastructure(quickscanData) {
+            // Quickscan V2 heeft geen centrale systems lijst
+            // Infrastructuur info komt uit process.infoSystems en process.otSystems
+            const processes = quickscanData.introductie?.processes || [];
+            const types = new Set();
+            
+            processes.forEach(process => {
+                // Check info systems
+                (process.infoSystems || []).forEach(sys => {
+                    if (sys.type) types.add(sys.type);
+                });
+                
+                // Check OT systems
+                (process.otSystems || []).forEach(sys => {
+                    if (sys.type) types.add(sys.type);
+                });
+            });
+            
+            const typeArray = Array.from(types);
+            
+            return {
+                types: typeArray,
+                primaryType: typeArray[0] || 'On-Premise',
+                cloudBased: typeArray.some(t => t.includes('Azure') || t.includes('AWS') || t.includes('Cloud') || t.includes('SaaS')),
+                hasSaaS: typeArray.some(t => t.includes('SaaS')),
+                hasPaaS: typeArray.some(t => t.includes('PaaS')),
+                hasIaaS: typeArray.some(t => t.includes('IaaS'))
+            };
+        },
+        calculateRiskLevel(classification) {
+            let score = 0;
+            if (classification.bbn === 'BBN2+') score += 30;
+            else if (classification.bbn === 'BBN2') score += 20;
+            else score += 10;
+            if (classification.biv.b === 'Hoog') score += 10;
+            if (classification.biv.i === 'Hoog') score += 10;
+            if (classification.biv.v === 'Hoog') score += 10;
+            if (classification.hasBijzonderePersoonsgegevens) score += 15;
+            else if (classification.hasPersoonsgegevens) score += 5;
+            if (classification.publicFacing) score += 10;
+            if (score >= 60) return 'HOOG';
+            if (score >= 35) return 'MEDIUM';
+            return 'LAAG';
+        },
+        generateControlFilters(classification, infrastructure, riskLevel) {
+            const filters = {
+                includeContainers: ['Foundation', 'Asset Management', 'Business Continuity'],
+                excludeContainers: [],
+                mandatoryControls: [],
+                optionalControls: [],
+                excludedControls: [],
+                controlLevelRequired: 'Basis'
+            };
+            if (riskLevel === 'HOOG') {
+                filters.controlLevelRequired = 'Hoog';
+                filters.includeContainers.push('Identity & Access Management','Threat Management','Vulnerability & Patch Management','Data Protection & Privacy','Secure Engineering & Architecture');
+            } else if (riskLevel === 'MEDIUM') {
+                filters.controlLevelRequired = 'Medium';
+                filters.includeContainers.push('Identity & Access Management','Data Protection & Privacy');
+            }
+            if (infrastructure.hasSaaS) {
+                filters.excludedControls.push('SYS-01','SYS-02','SYS-03','NET-01','NET-02');
+                filters.includeContainers.push('Third-Party Management');
+            }
+            if (infrastructure.cloudBased) {
+                filters.includeContainers.push('Secure Engineering & Architecture');
+            }
+            if (classification.hasPersoonsgegevens || classification.hasBijzonderePersoonsgegevens) {
+                filters.includeContainers.push('Data Protection & Privacy');
+                filters.mandatoryControls.push('PRI-01','PRI-02','PRI-03');
+            }
+            if (classification.publicFacing) {
+                filters.includeContainers.push('Threat Management','Secure Engineering & Architecture');
+            }
+            return filters;
+        },
+        getDefaultProfile() {
+            return {
+                id: `PROFILE-DEFAULT-${Date.now()}`,
+                quickscanId: null,
+                projectName: 'Onbekend Project (Geen Quickscan)',
+                created: new Date().toISOString(),
+                classification: { bbn: 'BBN1', biv: { b: 'Laag', i: 'Laag', v: 'Laag' }, hasPersoonsgegevens: false, hasBijzonderePersoonsgegevens: false, publicFacing: false },
+                infrastructure: { types: ['On-Premise'], primaryType: 'On-Premise', cloudBased: false, hasSaaS: false, hasPaaS: false, hasIaaS: false },
+                riskLevel: 'LAAG',
+                controlFilters: { includeContainers: ['Foundation'], excludeContainers: [], mandatoryControls: [], optionalControls: [], excludedControls: [], controlLevelRequired: 'Basis' },
+                metadata: { generatedBy: 'Risk Profile Generator v1.0 (Default)', note: 'Geen Quickscan beschikbaar - gebruik basis profiel' }
+            };
+        },
+        filterControls(allControls, riskProfile) {
+            const filters = riskProfile.controlFilters;
+            return allControls.filter(control => {
+                if (!filters.includeContainers.includes(control.containerName)) return false;
+                if (filters.excludedControls.includes(control.controlName)) return false;
+                return true;
+            });
+        },
+        saveProfile(riskProfile) {
+            const pfData = JSON.parse(localStorage.getItem('purpleFishDatabase') || '{}');
+            if (!pfData.riskProfiles) pfData.riskProfiles = {};
+            pfData.riskProfiles[riskProfile.id] = riskProfile;
+            localStorage.setItem('purpleFishDatabase', JSON.stringify(pfData));
+            console.log('✅ Risk Profile saved:', riskProfile.id);
+            return riskProfile;
+        },
+        loadProfile(profileId) {
+            const pfData = JSON.parse(localStorage.getItem('purpleFishDatabase') || '{}');
+            return pfData.riskProfiles?.[profileId] || null;
+        },
+        getAvailableQuickscans() {
+            const pfData = JSON.parse(localStorage.getItem('purpleFishDatabase') || '{}');
+            
+            // Quickscan V2 slaat data op in purpleFishDatabase.quickScanSimulations
+            if (!pfData.quickScanSimulations || !pfData.directies) {
+                console.warn('Geen Quickscan data gevonden in PurpleFish');
+                return [];
+            }
+            
+            const quickscans = [];
+            
+            // Loop through all directies and their quickscans
+            pfData.directies.forEach(directie => {
+                const qsId = directie.quickScanId;
+                const qsData = pfData.quickScanSimulations[qsId];
+                
+                if (qsData && qsData.introductie) {
+                    quickscans.push({
+                        id: qsId,
+                        name: `${directie.name}`,
+                        date: qsData.introductie.datumInvulling,
+                        directie: directie.name,
+                        hasData: qsData.introductie.processes && qsData.introductie.processes.length > 0
+                    });
+                }
+            });
+            
+            return quickscans;
+        },
+        
+        loadQuickscanById(quickscanId) {
+            const pfData = JSON.parse(localStorage.getItem('purpleFishDatabase') || '{}');
+            return pfData.quickScanSimulations?.[quickscanId] || null;
+        }
+    };
+    
+    // ============= CONFIGURATION =============
+    const STORAGE_KEY = 'purpleFishDatabase';
+    const VERSION = '2.0.0 (Sub-rule Iteration)';
+    
+    // ============= GLOBAL STATE =============
+    let currentSession = null;
+    let masterTemplate = null;
+    let activeControls = []; 
+    let currentControlIndex = 0;
+    let wikiContent = null;
+    let currentStep = 1;
+
+    // ============= INITIALIZATION =============
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTemplates();
+        loadQuickscansDropdown();
+        checkForPendingSession();
+    });
+    
+    function loadQuickscansDropdown() {
+        const quickscans = RiskProfileGenerator.getAvailableQuickscans();
+        const selector = document.getElementById('quickscan-selector');
+        
+        if (!selector) return;
+        
+        // Clear existing options except first
+        selector.innerHTML = '<option value="">Geen Quickscan (alle controls)</option>';
+        
+        // Add available quickscans
+        quickscans.forEach(qs => {
+            const option = document.createElement('option');
+            option.value = qs.id;
+            option.textContent = `${qs.name} ${qs.date ? '(' + qs.date + ')' : ''}`;
+            selector.appendChild(option);
+        });
+        
+        if (quickscans.length > 0) {
+            // Auto-select first quickscan
+            selector.selectedIndex = 1;
+        }
+    }
+    
+    function checkForPendingSession() {
+        // First check localStorage bridge (from IBAT)
+        const pendingSession = localStorage.getItem('sdat_pending_session');
+        if (pendingSession) {
+            // Clear the bridge immediately
+            localStorage.removeItem('sdat_pending_session');
+            // Load the session
+            loadSessionById(pendingSession);
+            return;
+        }
+        
+        // Fallback to URL params (if used)
+        const params = new URLSearchParams(window.location.search);
+        const sessionId = params.get('session');
+        if (sessionId) {
+            loadSessionById(sessionId);
+        }
+    }
+    
+    // ============= PURPLEFISH CORE =============
+    function loadPurpleFish() {
+        const data = localStorage.getItem(STORAGE_KEY);
+        return data ? JSON.parse(data) : null;
+    }
+    
+    function savePurpleFish(data) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    
+    function ensurePurpleFishStructure() {
+        let pfData = loadPurpleFish();
+        if (!pfData || !pfData.scfFramework) {
+            pfData = { scfFramework: { masterTemplate: null, sessions: {}, assessments: {} } };
+        }
+        if (!pfData.scfFramework.sessions) pfData.scfFramework.sessions = {};
+        savePurpleFish(pfData);
+        return pfData;
+    }
+
+    function loadTemplates() {
+        const pfData = loadPurpleFish();
+        if (!pfData?.scfFramework?.masterTemplate) return;
+        masterTemplate = pfData.scfFramework.masterTemplate;
+        flattenControls();
+    }
+    
+    function flattenControls() {
+        activeControls = [];
+        if(!masterTemplate) return;
+        masterTemplate.containers.forEach(container => {
+            container.controls.forEach(control => {
+                activeControls.push({ ...control, containerName: container.name });
+            });
+        });
+    }
+
+    // ============= SESSION LOGIC (AGGREGATION) =============
+
+    // De motor van deze iteratie: Berekent totaalstatus op basis van subregels
+    function calculateAggregateStatus(controlId) {
+        const data = currentSession.controlData[controlId];
+        if (!data || !data.rows) return 'Niet gestart';
+
+        let countVoldoet = 0;
+        let countNiet = 0;
+        let countDeels = 0;
+        let countTotalActive = 0;
+
+        // Loop door alle rows heen die in de data zitten
+        Object.keys(data.rows).forEach(rowIndex => {
+            const row = data.rows[rowIndex];
+            if (row.included) { // Alleen meetellen als 'included' true is
+                countTotalActive++;
+                if (row.status === 'Voldoet') countVoldoet++;
+                if (row.status === 'Niet') countNiet++;
+                if (row.status === 'Deels') countDeels++;
+            }
+        });
+
+        if (countTotalActive === 0) return 'NVT';
+        
+        // De logica: 
+        // 1. Alles Voldoet -> Voldoet
+        if (countVoldoet === countTotalActive) return 'Voldoet';
+        
+        // 2. Als er ook maar 1 'Niet' of 'Deels' is, is het totaal (voorlopig) 'Deels'
+        //    (Of 'Niet' als je heel streng bent, maar gebruiker vroeg om 'Deels' bij mix)
+        if (countNiet > 0 || countDeels > 0) return 'Deels';
+
+        return 'Niet'; // Fallback
+    }
+
+    function createNewSession() {
+        const nameInput = document.getElementById('project-name');
+        if (!nameInput || !nameInput.value) { alert('Project naam is verplicht'); return; }
+        
+        const sessionId = `SES-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+        const quickscanId = document.getElementById('quickscan-selector').value;
+        
+        // Generate Risk Profile if Quickscan selected
+        let riskProfile = null;
+        if (quickscanId) {
+            // Load quickscan data from PurpleFish
+            const quickscanData = RiskProfileGenerator.loadQuickscanById(quickscanId);
+            
+            if (quickscanData && quickscanData.introductie) {
+                riskProfile = RiskProfileGenerator.generateProfile(quickscanData);
+                RiskProfileGenerator.saveProfile(riskProfile);
+                console.log('✅ Risk Profile Generated:', riskProfile);
+                console.log('📊 Quickscan Data:', quickscanData);
+            } else {
+                console.warn('⚠️ Quickscan gevonden maar geen data:', quickscanId);
+            }
+        }
+        
+        currentSession = {
+            id: sessionId,
+            projectName: nameInput.value.trim(),
+            directie: document.getElementById('project-directie').value,
+            directieId: document.getElementById('project-directie').value,
+            description: document.getElementById('project-description').value,
+            templateId: 'master',
+            created: new Date().toISOString(),
+            status: 'Draft',
+            progress: 0,
+            wikiContent: wikiContent || '',
+            controlData: {}, // Structuur: { controlId: { aggregate: '...', rows: { 0: {status, included, note} } } }
+            currentStep: 1,
+            type: document.querySelector('input[name="session-type"]:checked').value,
+            
+            // NEW: Risk-based filtering
+            quickscanId: quickscanId || null,
+            riskProfileId: riskProfile ? riskProfile.id : null,
+            riskLevel: riskProfile ? riskProfile.riskLevel : 'ONBEKEND'
+        };
+        
+        // Apply risk-based control filtering
+        if (riskProfile) {
+            flattenControls(); // Start with all controls
+            activeControls = RiskProfileGenerator.filterControls(activeControls, riskProfile);
+            console.log(`🎯 Controls filtered: ${activeControls.length} relevant controls selected`);
+        } else {
+            flattenControls(); // Use all controls
+            console.log(`📋 No Quickscan - using all ${activeControls.length} controls`);
+        }
+        
+        saveSession();
+        document.getElementById('new-session-modal').classList.remove('active');
+        startWizard();
+        renderStep(1);
+    }
+    
+    function saveSession() {
+        const pfData = ensurePurpleFishStructure();
+        currentSession.updated = new Date().toISOString();
+        
+        // Calculate progress based on current step and completion
+        let progress = 0;
+        if (currentSession.currentStep) {
+            progress = (currentSession.currentStep / 4) * 100;
+        }
+        
+        // Determine status
+        let status = 'Draft';
+        if (currentSession.completedAt) {
+            status = 'Completed';
+            progress = 100;
+        } else if (currentSession.currentStep === 4) {
+            // In results phase but not completed
+            progress = 90;
+        }
+        
+        currentSession.status = status;
+        currentSession.progress = Math.round(progress);
+        
+        pfData.scfFramework.sessions[currentSession.id] = currentSession;
+        savePurpleFish(pfData);
+    }
+    
+    function loadSessionById(id) {
+        const pfData = loadPurpleFish();
+        if (pfData?.scfFramework?.sessions?.[id]) {
+            currentSession = pfData.scfFramework.sessions[id];
+            loadTemplates(); // Zorg dat template geladen is
+            startWizard();
+            renderStep(currentSession.currentStep || 1);
+        }
+    }
+
+    // ============= RENDERERS =============
+
+    function startWizard() {
+        document.getElementById('welcome-screen').style.display = 'none';
+        document.getElementById('wizard-content').style.display = 'block';
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('step-indicator').style.display = 'flex';
+        updateStepIndicator();
+    }
+
+    function updateStepIndicator() {
+        document.querySelectorAll('.step').forEach((el, index) => {
+            const stepNum = index + 1;
+            el.classList.remove('active', 'completed');
+            if (stepNum < currentStep) el.classList.add('completed');
+            else if (stepNum === currentStep) el.classList.add('active');
+        });
+    }
+
+    function renderStep(step) {
+        currentStep = step;
+        currentSession.currentStep = step;
+        saveSession();
+        updateStepIndicator();
+        
+        const content = document.getElementById('wizard-content');
+        if (step === 1) content.innerHTML = renderContextStep();
+        if (step === 2) renderControlsStep();
+        if (step === 3) content.innerHTML = renderRegisterStep();
+        if (step === 4) content.innerHTML = renderPlanningStep();
+    }
+
+    // --- STEP 1: CONTEXT ---
+    function renderContextStep() {
+        // Load risk profile if available
+        let riskProfileHTML = '';
+        if (currentSession.riskProfileId) {
+            const profile = RiskProfileGenerator.loadProfile(currentSession.riskProfileId);
+            if (profile) {
+                const riskColor = profile.riskLevel === 'HOOG' ? 'red' : profile.riskLevel === 'MEDIUM' ? 'yellow' : 'green';
+                riskProfileHTML = `
+                    <div class="bg-${riskColor}-50 border-l-4 border-${riskColor}-500 p-4 mb-4 rounded-r">
+                        <h3 class="font-bold text-${riskColor}-900 mb-2">🎯 Risk-Based Assessment</h3>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-${riskColor}-700 font-semibold">Risico Niveau:</span>
+                                <span class="ml-2 px-2 py-1 bg-${riskColor}-200 text-${riskColor}-900 rounded font-bold">${profile.riskLevel}</span>
+                            </div>
+                            <div>
+                                <span class="text-${riskColor}-700 font-semibold">BBN:</span>
+                                <span class="ml-2">${profile.classification.bbn}</span>
+                            </div>
+                            <div>
+                                <span class="text-${riskColor}-700 font-semibold">BIV:</span>
+                                <span class="ml-2">B: ${profile.classification.biv.b}, I: ${profile.classification.biv.i}, V: ${profile.classification.biv.v}</span>
+                            </div>
+                            <div>
+                                <span class="text-${riskColor}-700 font-semibold">Gefilterde Controls:</span>
+                                <span class="ml-2 font-bold">${activeControls.length}</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-${riskColor}-700 mt-2">
+                            <em>Controls zijn automatisch gefilterd op basis van Quickscan classificatie</em>
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        return `
+            <div class="draai-card p-6">
+                <h2 class="text-2xl font-bold mb-4">Context & Scope</h2>
+                
+                ${riskProfileHTML}
+                
+                <div class="mb-4">
+                    <p><strong>Project:</strong> ${currentSession.projectName}</p>
+                    <p><strong>Type:</strong> ${currentSession.type}</p>
+                    <p><strong>Aantal Controls:</strong> ${activeControls.length}</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block font-bold">Notities</label>
+                    <textarea class="w-full border p-2 rounded" rows="4" onchange="currentSession.wikiContent=this.value; saveSession()">${currentSession.wikiContent || ''}</textarea>
+                </div>
+                <div class="flex justify-end"><button onclick="renderStep(2)" class="btn-primary">Start Assessment →</button></div>
+            </div>`;
+    }
+
+    // --- STEP 2: CONTROLS (NEW GRANULAR UI) ---
+    function renderControlsStep() {
+        if(currentControlIndex >= activeControls.length) currentControlIndex = activeControls.length - 1;
+        if(currentControlIndex < 0) currentControlIndex = 0;
+        
+        const control = activeControls[currentControlIndex];
+        const content = document.getElementById('wizard-content');
+        
+        // Initialize Data Structure for this Control if missing
+        if (!currentSession.controlData[control.id]) {
+            currentSession.controlData[control.id] = {
+                aggregateStatus: 'Niet gestart',
+                rows: {} 
+            };
+            // Default alle template rows op 'Voldoet' of leeg? Laten we ze leeg laten (null)
+            control.rows.forEach((r, idx) => {
+                currentSession.controlData[control.id].rows[idx] = {
+                    status: null,
+                    included: true,
+                    note: ''
+                };
+            });
+        }
+
+        const sessionData = currentSession.controlData[control.id];
+        
+        // Helper voor kleur van totaal status
+        const aggColors = {
+            'Voldoet': 'bg-green-100 text-green-800 border-green-200',
+            'Deels': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+            'Niet': 'bg-red-100 text-red-800 border-red-200',
+            'NVT': 'bg-gray-100 text-gray-800 border-gray-200',
+            'Niet gestart': 'bg-gray-50 text-gray-500'
+        };
+
+        const html = `
+            <div class="draai-card p-6">
+                <div class="flex justify-between items-start mb-6 border-b pb-4">
+                    <div>
+                        <span class="text-xs font-bold text-blue-600 uppercase">${control.containerName}</span>
+                        <h2 class="text-2xl font-bold mt-1 flex items-center gap-3">
+                            ${control.controlName}
+                            <span class="text-sm px-3 py-1 rounded-full border ${aggColors[sessionData.aggregateStatus] || ''}">
+                                ${sessionData.aggregateStatus}
+                            </span>
+                        </h2>
+                        <p class="text-gray-600 mt-2 text-sm">${control.description || 'Geen beschrijving'}</p>
+                    </div>
+                    <div class="text-right text-sm text-gray-400">
+                        ${currentControlIndex + 1} / ${activeControls.length}
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    ${control.rows.map((row, idx) => renderSubRuleRow(control.id, row, idx, sessionData.rows[idx])).join('')}
+                </div>
+
+                <div class="flex justify-between pt-4 border-t">
+                    <button onclick="prevControl()" class="btn-secondary" ${currentControlIndex===0?'disabled':''}>← Vorige</button>
+                    <button onclick="nextControl()" class="btn-primary">Volgende →</button>
+                </div>
+            </div>
+        `;
+        content.innerHTML = html;
+    }
+
+   function renderSubRuleRow(controlId, templateRow, idx, sessionRow) {
+    if (!sessionRow) sessionRow = { status: null, included: true, note: '' };
+    
+    const isIncluded = sessionRow.included;
+    const status = sessionRow.status;
+
+    // --- TOOLTIP LOGICA ---
+    // We tonen de 'i' alleen als templateRow.tooltip tekst bevat.
+    // De styling gebruikt Tailwind 'group' voor hover effecten.
+    const tooltipHtml = templateRow.tooltip ? 
+        `<div class="group relative inline-flex items-center ml-2 align-middle">
+            <div class="cursor-help flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-600 rounded-full border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors">
+                <span class="text-xs font-serif font-bold italic">i</span>
+            </div>
+            
+            <div class="invisible group-hover:visible absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none">
+                ${templateRow.tooltip}
+                <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-8 border-transparent border-t-gray-900"></div>
+            </div>
+         </div>` : '';
+    // ----------------------
+
+    return `
+        <div class="border rounded-lg p-4 mb-3 ${isIncluded ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-100 opacity-60'} transition-all shadow-sm hover:shadow-md">
+            <div class="flex items-start gap-4">
+                <div class="pt-1">
+                    <input type="checkbox" ${isIncluded ? 'checked' : ''} 
+                        onchange="updateSubRule('${controlId}', ${idx}, 'included', this.checked)"
+                        class="w-5 h-5 text-blue-600 rounded cursor-pointer border-gray-300 focus:ring-blue-500" 
+                        title="Tel mee in assessment">
+                </div>
+
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-900 mb-2 leading-relaxed flex items-center flex-wrap">
+                        ${templateRow.controlTekst || '<em>Geen omschrijving beschikbaar</em>'} 
+                        ${tooltipHtml}
+                    </div>
+                    
+                    ${isIncluded ? `
+                    <div class="flex flex-wrap gap-2 mb-3">
+                        <button onclick="updateSubRule('${controlId}', ${idx}, 'status', 'Voldoet')" 
+                            class="px-3 py-1.5 rounded-md text-xs font-bold border transition-all ${status==='Voldoet'?'bg-green-600 text-white border-green-700 shadow-inner':'bg-white text-gray-600 border-gray-300 hover:bg-green-50 hover:border-green-400'}">
+                            ✅ Voldoet
+                        </button>
+                        <button onclick="updateSubRule('${controlId}', ${idx}, 'status', 'Deels')" 
+                            class="px-3 py-1.5 rounded-md text-xs font-bold border transition-all ${status==='Deels'?'bg-yellow-500 text-white border-yellow-600 shadow-inner':'bg-white text-gray-600 border-gray-300 hover:bg-yellow-50 hover:border-yellow-400'}">
+                            ⚠️ Deels
+                        </button>
+                        <button onclick="updateSubRule('${controlId}', ${idx}, 'status', 'Niet')" 
+                            class="px-3 py-1.5 rounded-md text-xs font-bold border transition-all ${status==='Niet'?'bg-red-600 text-white border-red-700 shadow-inner':'bg-white text-gray-600 border-gray-300 hover:bg-red-50 hover:border-red-400'}">
+                            ❌ Niet
+                        </button>
+                        <button onclick="updateSubRule('${controlId}', ${idx}, 'status', 'NVT')" 
+                            class="px-3 py-1.5 rounded-md text-xs font-bold border transition-all ${status==='NVT'?'bg-gray-600 text-white border-gray-700 shadow-inner':'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'}">
+                            ⚪ NVT
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <input type="text" 
+                            placeholder="Toelichting, link naar bewijs of Jira ticket..." 
+                            value="${sessionRow.note || ''}"
+                            onchange="updateSubRule('${controlId}', ${idx}, 'note', this.value)"
+                            class="w-full text-xs p-2.5 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-gray-50 focus:bg-white transition-colors">
+                    </div>
+                    ` : '<span class="text-xs text-gray-400 italic py-2 block">Deze regel is uitgesloten van het assessment.</span>'}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+    function updateSubRule(controlId, rowIdx, field, value) {
+        // Init if empty
+        if (!currentSession.controlData[controlId]) currentSession.controlData[controlId] = { rows: {} };
+        if (!currentSession.controlData[controlId].rows[rowIdx]) {
+            currentSession.controlData[controlId].rows[rowIdx] = { status: null, included: true, note: '' };
+        }
+
+        // Update value
+        currentSession.controlData[controlId].rows[rowIdx][field] = value;
+
+        // Recalculate Parent
+        const newAggregate = calculateAggregateStatus(controlId);
+        currentSession.controlData[controlId].aggregateStatus = newAggregate;
+
+        saveSession();
+        renderControlsStep(); // Refresh UI
+    }
+
+    function nextControl() {
+        if(currentControlIndex < activeControls.length - 1) {
+            currentControlIndex++;
+            renderControlsStep();
+        } else {
+            renderStep(3);
+        }
+    }
+    
+    function prevControl() {
+        if(currentControlIndex > 0) {
+            currentControlIndex--;
+            renderControlsStep();
+        }
+    }
+
+    // --- STEP 3: REGISTER (UPDATED FOR SUB-RULES) ---
+    function renderRegisterStep() {
+        // Verzamel alle falende sub-regels
+        const issues = [];
+
+        activeControls.forEach(control => {
+            const data = currentSession.controlData[control.id];
+            if (!data || !data.rows) return;
+
+            Object.keys(data.rows).forEach(idx => {
+                const row = data.rows[idx];
+                const templateRow = control.rows[idx];
+                
+                // Als included is EN status is Niet of Deels
+                if (row.included && (row.status === 'Niet' || row.status === 'Deels')) {
+                    issues.push({
+                        controlName: control.controlName,
+                        controlId: control.id,
+                        subRuleText: templateRow.controlTekst,
+                        status: row.status,
+                        note: row.note
+                    });
+                }
+            });
+        });
+
+        return `
+            <div class="draai-card p-6">
+                <h2 class="text-2xl font-bold mb-4">Stap 3: Actie Register</h2>
+                <p class="mb-6 text-gray-600">Hieronder staan alle specifieke regels die aandacht vereisen.</p>
+
+                ${issues.length === 0 ? 
+                    '<div class="p-4 bg-green-100 text-green-800 rounded">Alles voldoet! Geen acties.</div>' : 
+                    `<div class="space-y-4">
+                        ${issues.map(issue => `
+                            <div class="bg-white border-l-4 ${issue.status==='Niet'?'border-red-500':'border-yellow-500'} shadow p-4 rounded">
+                                <div class="flex justify-between mb-1">
+                                    <h3 class="font-bold text-gray-800">${issue.controlName}</h3>
+                                    <span class="text-xs font-bold px-2 py-1 rounded ${issue.status==='Niet'?'bg-red-100 text-red-800':'bg-yellow-100 text-yellow-800'}">${issue.status}</span>
+                                </div>
+                                <p class="text-sm text-gray-600 mb-2">${issue.subRuleText}</p>
+                                <div class="text-xs bg-gray-50 p-2 rounded">
+                                    <strong>Huidige notitie:</strong> ${issue.note || '-'}
+                                </div>
+                                <div class="mt-2">
+                                    <label class="text-xs font-bold text-gray-500">Actiehouder & Plan</label>
+                                    <input type="text" class="w-full border p-1 rounded text-sm" placeholder="Wie gaat dit oplossen?">
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>`
+                }
+                
+                <div class="flex justify-between mt-6">
+                    <button onclick="renderStep(2)" class="btn-secondary">Terug</button>
+                    <button onclick="renderStep(4)" class="btn-primary">Naar Resultaten Analyse →</button>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- STEP 4: RESULTS ANALYSIS DASHBOARD (DRAAI-STYLE) ---
+    function renderPlanningStep() {
+        // Collect all data
+        const issues = [];
+        const compliantControls = [];
+        
+        activeControls.forEach(control => {
+            const controlData = currentSession.controlData[control.id];
+            if (!controlData) return;
+
+            let hasIssues = false;
+            control.rows.forEach((templateRow, idx) => {
+                const row = controlData.rows[idx];
+                if (!row || !row.included) return;
+                
+                if (row.status === 'Niet' || row.status === 'Deels') {
+                    hasIssues = true;
+                    issues.push({
+                        controlName: control.controlName,
+                        controlId: control.id,
+                        containerName: control.container || 'Unknown',
+                        rowIndex: idx,
+                        subRuleText: templateRow.controlTekst,
+                        status: row.status,
+                        note: row.note || '',
+                        actionOwner: row.actionOwner || '',
+                        deadline: row.deadline || '',
+                        pdcaPhase: row.pdcaPhase || 'Plan',
+                        implementationTags: control.implementationTags || [],
+                        categoryTags: control.categoryTags || []
+                    });
+                }
+            });
+            
+            if (!hasIssues && controlData.aggregateStatus === 'Voldoet') {
+                compliantControls.push({
+                    controlName: control.controlName,
+                    containerName: control.container || 'Unknown',
+                    implementationTags: control.implementationTags || [],
+                    categoryTags: control.categoryTags || []
+                });
+            }
+        });
+
+        // Calculate statistics
+        const totalControls = activeControls.length;
+        const totalIssues = issues.length;
+        const criticalIssues = issues.filter(i => i.status === 'Niet').length;
+        const partialIssues = issues.filter(i => i.status === 'Deels').length;
+        const compliantCount = compliantControls.length;
+        const compliancePercentage = totalControls > 0 ? Math.round((compliantCount / totalControls) * 100) : 0;
+        
+        // PDCA distribution
+        const planPhase = issues.filter(i => i.pdcaPhase === 'Plan').length;
+        const doPhase = issues.filter(i => i.pdcaPhase === 'Do').length;
+        const checkPhase = issues.filter(i => i.pdcaPhase === 'Check').length;
+        const actPhase = issues.filter(i => i.pdcaPhase === 'Act').length;
+
+        // Risk level determination
+        let riskLevel = 'Laag';
+        let riskColor = 'text-green-600';
+        let riskBg = 'bg-green-50';
+        let riskBorder = 'border-green-200';
+        
+        if (criticalIssues > 5 || compliancePercentage < 50) {
+            riskLevel = 'Hoog';
+            riskColor = 'text-red-600';
+            riskBg = 'bg-red-50';
+            riskBorder = 'border-red-200';
+        } else if (criticalIssues > 2 || compliancePercentage < 75) {
+            riskLevel = 'Medium';
+            riskColor = 'text-yellow-600';
+            riskBg = 'bg-yellow-50';
+            riskBorder = 'border-yellow-200';
+        }
+
+        return `
+            <div class="space-y-6">
+                <!-- Page Header -->
+                <div class="draai-card p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-3xl font-bold text-gray-900">Resultaten Analyse Dashboard</h2>
+                            <p class="text-gray-600 mt-2">SCF Assessment voor ${currentSession.projectName}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="exportToCSV()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-semibold">
+                                📥 Export CSV
+                            </button>
+                            <button onclick="generateReport()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm font-semibold">
+                                📊 Genereer Rapport
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics Dashboard -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div class="${riskBg} ${riskBorder} border-2 rounded-lg p-6 text-center">
+                        <div class="text-4xl font-bold ${riskColor}">${riskLevel}</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Risico Niveau</div>
+                    </div>
+                    <div class="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 text-center">
+                        <div class="text-4xl font-bold text-blue-700">${compliancePercentage}%</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Compliance Rate</div>
+                    </div>
+                    <div class="bg-green-50 border-2 border-green-200 rounded-lg p-6 text-center">
+                        <div class="text-4xl font-bold text-green-700">${compliantCount}</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Voldoet</div>
+                    </div>
+                    <div class="bg-red-50 border-2 border-red-200 rounded-lg p-6 text-center">
+                        <div class="text-4xl font-bold text-red-700">${totalIssues}</div>
+                        <div class="text-sm font-semibold text-gray-700 mt-1">Actie Vereist</div>
+                    </div>
+                </div>
+
+                <!-- Issue Breakdown -->
+                <div class="draai-card p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Issue Breakdown</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-red-50 border border-red-200 rounded p-4 text-center">
+                            <div class="text-3xl font-bold text-red-700">${criticalIssues}</div>
+                            <div class="text-sm text-red-600 font-semibold">Kritiek (Niet Voldoet)</div>
+                        </div>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded p-4 text-center">
+                            <div class="text-3xl font-bold text-yellow-700">${partialIssues}</div>
+                            <div class="text-sm text-yellow-600 font-semibold">Gedeeltelijk</div>
+                        </div>
+                        <div class="bg-gray-50 border border-gray-200 rounded p-4 text-center">
+                            <div class="text-3xl font-bold text-gray-700">${totalControls - totalIssues}</div>
+                            <div class="text-sm text-gray-600 font-semibold">NVT</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PDCA Cycle Distribution -->
+                <div class="draai-card p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">PDCA Cyclus Verdeling</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                            <div class="text-3xl font-bold text-blue-600">${planPhase}</div>
+                            <div class="text-sm text-gray-700 font-semibold mt-1">📋 Plan</div>
+                            <div class="text-xs text-gray-500">Analyse & Planning</div>
+                        </div>
+                        <div class="text-center p-4 bg-purple-50 rounded-lg border border-purple-200">
+                            <div class="text-3xl font-bold text-purple-600">${doPhase}</div>
+                            <div class="text-sm text-gray-700 font-semibold mt-1">🔨 Do</div>
+                            <div class="text-xs text-gray-500">Implementatie</div>
+                        </div>
+                        <div class="text-center p-4 bg-orange-50 rounded-lg border border-orange-200">
+                            <div class="text-3xl font-bold text-orange-600">${checkPhase}</div>
+                            <div class="text-sm text-gray-700 font-semibold mt-1">✓ Check</div>
+                            <div class="text-xs text-gray-500">Verificatie</div>
+                        </div>
+                        <div class="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div class="text-3xl font-bold text-green-600">${actPhase}</div>
+                            <div class="text-sm text-gray-700 font-semibold mt-1">⚡ Act</div>
+                            <div class="text-xs text-gray-500">Borging</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Management Summary -->
+                <div class="draai-card p-6">
+                    <h3 class="text-xl font-bold text-gray-900 mb-4">Management Samenvatting</h3>
+                    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                        <p class="text-sm text-blue-900 mb-2"><strong>Executive Summary:</strong></p>
+                        <textarea id="management-summary" 
+                                  class="w-full border rounded p-3 text-sm" 
+                                  rows="6"
+                                  placeholder="Schrijf hier de management samenvatting van het SCF assessment..."
+                                  onchange="currentSession.managementSummary=this.value; saveSession()">${currentSession.managementSummary || generateAutoSummary(totalControls, compliancePercentage, criticalIssues, partialIssues)}</textarea>
+                    </div>
+                </div>
+
+                <!-- Critical Issues (High Priority) -->
+                ${criticalIssues > 0 ? `
+                <div class="draai-card p-6 border-l-4 border-red-500">
+                    <h3 class="text-xl font-bold text-red-700 mb-4">🚨 Kritieke Issues (Onmiddellijke Actie Vereist)</h3>
+                    <div class="space-y-4">
+                        ${issues.filter(i => i.status === 'Niet').map((issue, idx) => `
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-bold text-gray-900">${issue.controlName}</h4>
+                                            <span class="text-xs bg-red-600 text-white px-2 py-1 rounded font-bold">KRITIEK</span>
+                                            <span class="text-xs bg-gray-600 text-white px-2 py-1 rounded">${issue.containerName}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700">${issue.subRuleText}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3 mt-3">
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-600 block mb-1">Actiehouder</label>
+                                        <input type="text" 
+                                               value="${issue.actionOwner}"
+                                               onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'actionOwner', this.value)"
+                                               class="w-full border rounded p-2 text-sm" 
+                                               placeholder="Naam verantwoordelijke">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-600 block mb-1">Deadline</label>
+                                        <input type="date" 
+                                               value="${issue.deadline}"
+                                               onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'deadline', this.value)"
+                                               class="w-full border rounded p-2 text-sm">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <label class="text-xs font-bold text-gray-600 block mb-1">PDCA Fase</label>
+                                    <select class="w-full border rounded p-2 text-sm"
+                                            onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'pdcaPhase', this.value)">
+                                        <option value="Plan" ${issue.pdcaPhase==='Plan'?'selected':''}>📋 Plan - Analyse & Planning</option>
+                                        <option value="Do" ${issue.pdcaPhase==='Do'?'selected':''}>🔨 Do - Implementatie</option>
+                                        <option value="Check" ${issue.pdcaPhase==='Check'?'selected':''}>✓ Check - Verificatie</option>
+                                        <option value="Act" ${issue.pdcaPhase==='Act'?'selected':''}>⚡ Act - Borging</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <label class="text-xs font-bold text-gray-600 block mb-1">Actieplan / Notities</label>
+                                    <textarea class="w-full border rounded p-2 text-sm" 
+                                              rows="3"
+                                              onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'note', this.value)"
+                                              placeholder="Beschrijf de uit te voeren actie...">${issue.note}</textarea>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Partial Compliance Issues -->
+                ${partialIssues > 0 ? `
+                <div class="draai-card p-6 border-l-4 border-yellow-500">
+                    <h3 class="text-xl font-bold text-yellow-700 mb-4">⚠️ Gedeeltelijke Issues (Verbetering Nodig)</h3>
+                    <div class="space-y-4">
+                        ${issues.filter(i => i.status === 'Deels').map((issue, idx) => `
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-bold text-gray-900">${issue.controlName}</h4>
+                                            <span class="text-xs bg-yellow-600 text-white px-2 py-1 rounded font-bold">DEELS</span>
+                                            <span class="text-xs bg-gray-600 text-white px-2 py-1 rounded">${issue.containerName}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700">${issue.subRuleText}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-3 mt-3">
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-600 block mb-1">Actiehouder</label>
+                                        <input type="text" 
+                                               value="${issue.actionOwner}"
+                                               onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'actionOwner', this.value)"
+                                               class="w-full border rounded p-2 text-sm" 
+                                               placeholder="Naam verantwoordelijke">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-bold text-gray-600 block mb-1">Deadline</label>
+                                        <input type="date" 
+                                               value="${issue.deadline}"
+                                               onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'deadline', this.value)"
+                                               class="w-full border rounded p-2 text-sm">
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <label class="text-xs font-bold text-gray-600 block mb-1">PDCA Fase</label>
+                                    <select class="w-full border rounded p-2 text-sm"
+                                            onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'pdcaPhase', this.value)">
+                                        <option value="Plan" ${issue.pdcaPhase==='Plan'?'selected':''}>📋 Plan</option>
+                                        <option value="Do" ${issue.pdcaPhase==='Do'?'selected':''}>🔨 Do</option>
+                                        <option value="Check" ${issue.pdcaPhase==='Check'?'selected':''}>✓ Check</option>
+                                        <option value="Act" ${issue.pdcaPhase==='Act'?'selected':''}>⚡ Act</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <label class="text-xs font-bold text-gray-600 block mb-1">Actieplan / Notities</label>
+                                    <textarea class="w-full border rounded p-2 text-sm" 
+                                              rows="2"
+                                              onchange="updateIssueField('${issue.controlId}', ${issue.rowIndex}, 'note', this.value)"
+                                              placeholder="Beschrijf de uit te voeren actie...">${issue.note}</textarea>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Compliant Controls -->
+                ${compliantCount > 0 ? `
+                <div class="draai-card p-6 border-l-4 border-green-500">
+                    <h3 class="text-xl font-bold text-green-700 mb-4">✅ Voldoende Controls (${compliantCount})</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${compliantControls.map(control => `
+                            <div class="bg-green-50 border border-green-200 rounded p-3">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <span class="font-semibold text-gray-900">${control.controlName}</span>
+                                        <span class="text-xs text-gray-600 ml-2">(${control.containerName})</span>
+                                    </div>
+                                    <span class="text-green-600 text-xl">✓</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Action Buttons -->
+                <div class="draai-card p-6">
+                    <div class="flex justify-between items-center">
+                        <button onclick="renderStep(3)" class="btn-secondary">
+                            ← Terug naar Register
+                        </button>
+                        <div class="flex gap-3">
+                            <button onclick="printReport()" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 font-semibold">
+                                🖨️ Print Rapport
+                            </button>
+                            <button onclick="completeAssessment()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">
+                                ✓ Assessment Afronden
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // Generate automatic summary
+    function generateAutoSummary(total, compliance, critical, partial) {
+        const riskLevel = critical > 5 || compliance < 50 ? 'hoog' : critical > 2 || compliance < 75 ? 'medium' : 'laag';
+        
+        return `Op basis van het SCF DRAAI Assessment voor ${currentSession.projectName} (${currentSession.type}) zijn ${total} security controls beoordeeld.
+
+Compliance Status: ${compliance}% van de controls voldoet aan de gestelde eisen.
+
+Risiconiveau: ${riskLevel.toUpperCase()}
+- Kritieke issues: ${critical}
+- Gedeeltelijke issues: ${partial}
+
+${critical > 0 ? `Er zijn ${critical} kritieke beveiligingscontrols geïdentificeerd die onmiddellijke aandacht vereisen. ` : ''}${partial > 0 ? `Daarnaast zijn er ${partial} controls die gedeeltelijk voldoen en verbetering behoeven. ` : ''}
+
+Aanbeveling: ${riskLevel === 'hoog' ? 'Livegang wordt niet aanbevolen totdat alle kritieke issues zijn opgelost.' : riskLevel === 'medium' ? 'Livegang kan worden overwogen mits een gedegen plan van aanpak wordt opgesteld en kritieke issues binnen 30 dagen worden geadresseerd.' : 'Het systeem voldoet grotendeels aan de security controls. Resterende issues kunnen via reguliere PDCA-cyclus worden opgepakt.'}`;
+    }
+
+    // Helper function to update issue fields
+    function updateIssueField(controlId, rowIndex, field, value) {
+        if (!currentSession.controlData[controlId]) return;
+        if (!currentSession.controlData[controlId].rows[rowIndex]) return;
+        
+        currentSession.controlData[controlId].rows[rowIndex][field] = value;
+        saveSession();
+        console.log(`Updated ${field} for control ${controlId}, row ${rowIndex}:`, value);
+    }
+
+    // Export to CSV
+    function exportToCSV() {
+        const issues = [];
+        activeControls.forEach(control => {
+            const controlData = currentSession.controlData[control.id];
+            if (!controlData) return;
+
+            control.rows.forEach((templateRow, idx) => {
+                const row = controlData.rows[idx];
+                if (!row || !row.included) return;
+                
+                if (row.status === 'Niet' || row.status === 'Deels') {
+                    issues.push({
+                        Container: control.container || 'Unknown',
+                        Control: control.controlName,
+                        Eis: templateRow.controlTekst.replace(/"/g, '""'),
+                        Status: row.status,
+                        Actiehouder: row.actionOwner || '',
+                        Deadline: row.deadline || '',
+                        'PDCA Fase': row.pdcaPhase || 'Plan',
+                        Notitie: (row.note || '').replace(/"/g, '""')
+                    });
+                }
+            });
+        });
+
+        if (issues.length === 0) {
+            alert('Geen acties om te exporteren!');
+            return;
+        }
+
+        // Create CSV
+        const headers = Object.keys(issues[0]);
+        const csvContent = [
+            headers.join(','),
+            ...issues.map(issue => 
+                headers.map(h => `"${issue[h]}"`).join(',')
+            )
+        ].join('\n');
+
+        // Download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `SDAT_${currentSession.projectName}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+    }
+
+    // Generate Report (placeholder for future PDF generation)
+    function generateReport() {
+        alert('📊 Rapport generatie functie komt in volgende iteratie!\n\nVoor nu kunt u:\n- Print gebruiken voor PDF export\n- CSV export voor data analyse');
+    }
+
+    // Print Report
+    function printReport() {
+        window.print();
+    }
+
+    // Complete Assessment
+    function completeAssessment() {
+        if (confirm('Assessment afronden? Je kunt later altijd terugkeren naar deze sessie.')) {
+            currentSession.completedAt = new Date().toISOString();
+            saveSession();
+            alert('✅ Assessment succesvol afgerond! Data is opgeslagen in localStorage.');
+            renderStep(1);
+        }
+    }
+
+    // Modal helpers
+    function openNewSessionModal() { document.getElementById('new-session-modal').classList.add('active'); }
+    function closeNewSessionModal() { document.getElementById('new-session-modal').classList.remove('active'); }
+</script>
+</body>
+</html>

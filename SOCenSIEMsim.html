@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC-SIEM Simulator - Security Operations Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0c1421 0%, #1a1f2e 100%);
+            color: #e2e8f0;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass morphism for panels */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.75rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Animated background grid */
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 20s linear infinite;
+        }
+        
+        @keyframes grid-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 50px 50px; }
+        }
+        
+        /* Status indicators */
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+            animation: pulse-dot 2s infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .status-critical { background-color: #ef4444; }
+        .status-warning { background-color: #f59e0b; }
+        .status-info { background-color: #3b82f6; }
+        .status-success { background-color: #10b981; }
+        
+        /* Alert animations */
+        .alert-flash {
+            animation: alert-flash 1s ease-in-out infinite alternate;
+        }
+        
+        @keyframes alert-flash {
+            from { background-color: rgba(239, 68, 68, 0.1); }
+            to { background-color: rgba(239, 68, 68, 0.3); }
+        }
+        
+        /* Console styling */
+        .console {
+            background: #000000;
+            color: #00ff00;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            height: 200px;
+            overflow-y: auto;
+            border: 1px solid #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.2);
+        }
+        
+        .console::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .console::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        .console::-webkit-scrollbar-thumb {
+            background: #22c55e;
+            border-radius: 4px;
+        }
+        
+        /* Threat map styling */
+        .threat-map {
+            position: relative;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        
+        .threat-point {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse-threat 2s infinite;
+        }
+        
+        @keyframes pulse-threat {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .threat-critical { background: #ef4444; box-shadow: 0 0 15px #ef4444; }
+        .threat-warning { background: #f59e0b; box-shadow: 0 0 15px #f59e0b; }
+        .threat-info { background: #3b82f6; box-shadow: 0 0 15px #3b82f6; }
+        
+        /* Dashboard metrics */
+        .metric-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        /* Table styling */
+        .data-table {
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .data-table th {
+            background: rgba(30, 41, 59, 0.9);
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        /* Button styling */
+        .btn-soc {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-soc:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+        
+        /* Modal styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        /* Tabs */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab-button.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        
+        .tab-button:hover {
+            color: #e2e8f0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Network topology */
+        .network-node {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .network-node:hover {
+            transform: scale(1.2);
+        }
+        
+        .node-server { background: #3b82f6; color: white; }
+        .node-workstation { background: #10b981; color: white; }
+        .node-firewall { background: #f59e0b; color: white; }
+        .node-router { background: #8b5cf6; color: white; }
+        .node-compromised { background: #ef4444; color: white; animation: pulse-threat 1s infinite; }
+        
+        /* Live stats animation */
+        .live-counter {
+            font-variant-numeric: tabular-nums;
+            transition: color 0.3s;
+        }
+        
+        .live-counter.updated {
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body class="grid-bg min-h-screen">
+    <div class="container mx-auto p-4">
+        <!-- Header -->
+        <header class="glass-panel p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-white mb-2">🛡️ SOC-SIEM Command Center</h1>
+                    <p class="text-slate-400">Gemeente Security Operations Center - Real-time Monitoring & Response</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <div class="text-sm text-slate-400">System Status</div>
+                        <div class="flex items-center">
+                            <span class="status-dot status-success"></span>
+                            <span class="text-green-400 font-semibold">OPERATIONAL</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-slate-400">Last Update</div>
+                        <div class="text-white font-mono text-sm" id="last-update">--:--:--</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Grid -->
+        <div class="grid grid-cols-12 gap-6">
+            <!-- Left Column: Metrics & Alerts -->
+            <div class="col-span-4 space-y-6">
+                <!-- Key Metrics -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">🎯 Key Security Metrics</h2>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="metric-card glass-panel p-4 text-center">
+                            <div class="text-3xl font-bold text-red-400 live-counter" id="active-threats">0</div>
+                            <div class="text-sm text-slate-400">Active Threats</div>
+                        </div>
+                        <div class="metric-card glass-panel p-4 text-center">
+                            <div class="text-3xl font-bold text-yellow-400 live-counter" id="alerts-24h">0</div>
+                            <div class="text-sm text-slate-400">Alerts (24h)</div>
+                        </div>
+                        <div class="metric-card glass-panel p-4 text-center">
+                            <div class="text-3xl font-bold text-blue-400 live-counter" id="events-sec">0</div>
+                            <div class="text-sm text-slate-400">Events/sec</div>
+                        </div>
+                        <div class="metric-card glass-panel p-4 text-center">
+                            <div class="text-3xl font-bold text-green-400 live-counter" id="systems-monitored">0</div>
+                            <div class="text-sm text-slate-400">Systems</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Real-time Alerts -->
+                <div class="glass-panel p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-white">🚨 Real-time Security Alerts</h2>
+                        <button class="btn-soc btn-danger text-sm" onclick="clearAllAlerts()">Clear All</button>
+                    </div>
+                    <div id="alerts-container" class="space-y-2 max-h-80 overflow-y-auto">
+                        <!-- Alerts will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Threat Intelligence Feed -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">🔍 Threat Intelligence</h2>
+                    <div id="threat-intel" class="space-y-3 text-sm">
+                        <!-- Threat intel will be populated here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center Column: Network Map & Console -->
+            <div class="col-span-5 space-y-6">
+                <!-- Network Topology -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">🌐 Network Topology & Threats</h2>
+                    <div class="threat-map relative h-80" id="network-map">
+                        <!-- Network nodes will be positioned here -->
+                    </div>
+                    <div class="flex justify-between items-center mt-4 text-sm">
+                        <div class="flex gap-4">
+                            <div class="flex items-center"><div class="w-3 h-3 bg-blue-500 rounded mr-2"></div>Servers</div>
+                            <div class="flex items-center"><div class="w-3 h-3 bg-green-500 rounded mr-2"></div>Workstations</div>
+                            <div class="flex items-center"><div class="w-3 h-3 bg-yellow-500 rounded mr-2"></div>Network Devices</div>
+                            <div class="flex items-center"><div class="w-3 h-3 bg-red-500 rounded mr-2"></div>Compromised</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Event Console -->
+                <div class="glass-panel p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-white">💻 Security Event Console</h2>
+                        <div class="flex gap-2">
+                            <button class="btn-soc text-sm" onclick="pauseConsole()">Pause</button>
+                            <button class="btn-soc text-sm" onclick="clearConsole()">Clear</button>
+                        </div>
+                    </div>
+                    <div class="console" id="security-console">
+                        [SYSTEM] SOC-SIEM Console initialized...<br>
+                        [INFO] Monitoring 847 endpoints across gemeente network<br>
+                        [INFO] Threat detection engines active<br>
+                    </div>
+                </div>
+
+                <!-- Attack Timeline -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">📊 Security Events Timeline</h2>
+                    <canvas id="timeline-chart" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Right Column: Incidents & Analysis -->
+            <div class="col-span-3 space-y-6">
+                <!-- Active Incidents -->
+                <div class="glass-panel p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold text-white">🎯 Active Incidents</h2>
+                        <button class="btn-soc text-sm" onclick="openIncidentModal()">New Incident</button>
+                    </div>
+                    <div id="incidents-list" class="space-y-2">
+                        <!-- Incidents will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Top Threats -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-bold text-white mb-4">🏆 Top Threats (24h)</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-2 bg-red-900/30 rounded">
+                            <span class="text-sm">Ransomware Attempt</span>
+                            <span class="text-red-400 font-bold">15</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-yellow-900/30 rounded">
+                            <span class="text-sm">Phishing Emails</span>
+                            <span class="text-yellow-400 font-bold">32</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-orange-900/30 rounded">
+                            <span class="text-sm">Malware Detection</span>
+                            <span class="text-orange-400 font-bold">8</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-blue-900/30 rounded">
+                            <span class="text-sm">Suspicious Login</span>
+                            <span class="text-blue-400 font-bold">127</span>
+                        </div>
+                        <div class="flex justify-between items-center p-2 bg-purple-900/30 rounded">
+                            <span class="text-sm">DDoS Attempts</span>
+                            <span class="text-purple-400 font-bold">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-bold text-white mb-4">💚 System Health</h2>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Firewall Status</span>
+                            <div class="flex items-center">
+                                <span class="status-dot status-success"></span>
+                                <span class="text-green-400 text-sm">Online</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">IDS/IPS</span>
+                            <div class="flex items-center">
+                                <span class="status-dot status-success"></span>
+                                <span class="text-green-400 text-sm">Active</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Antivirus</span>
+                            <div class="flex items-center">
+                                <span class="status-dot status-warning"></span>
+                                <span class="text-yellow-400 text-sm">Updating</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Backup Systems</span>
+                            <div class="flex items-center">
+                                <span class="status-dot status-success"></span>
+                                <span class="text-green-400 text-sm">Healthy</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">Log Collection</span>
+                            <div class="flex items-center">
+                                <span class="status-dot status-success"></span>
+                                <span class="text-green-400 text-sm">98.7%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="glass-panel p-6">
+                    <h2 class="text-lg font-bold text-white mb-4">⚡ Quick Actions</h2>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button class="btn-soc text-sm p-2" onclick="blockIP()">Block IP</button>
+                        <button class="btn-soc text-sm p-2" onclick="quarantineHost()">Quarantine</button>
+                        <button class="btn-soc text-sm p-2" onclick="updateRules()">Update Rules</button>
+                        <button class="btn-soc text-sm p-2" onclick="scanNetwork()">Network Scan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Section: Detailed Views -->
+        <div class="mt-6 glass-panel p-6">
+            <div class="flex border-b border-slate-700 mb-6">
+                <button class="tab-button active" onclick="switchTab(event, 'events')">Security Events</button>
+                <button class="tab-button" onclick="switchTab(event, 'investigation')">Investigation Tools</button>
+                <button class="tab-button" onclick="switchTab(event, 'compliance')">Compliance Monitoring</button>
+                <button class="tab-button" onclick="switchTab(event, 'reports')">Reports & Analytics</button>
+            </div>
+
+            <!-- Security Events Tab -->
+            <div id="events-tab" class="tab-content active">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-white">Security Events Database</h2>
+                    <div class="flex gap-2">
+                        <select class="bg-slate-700 text-white p-2 rounded" onchange="filterEvents(this.value)">
+                            <option value="all">All Severity</option>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <button class="btn-soc" onclick="exportEvents()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full data-table">
+                        <thead>
+                            <tr class="border-b border-slate-600">
+                                <th class="text-left p-3">Timestamp</th>
+                                <th class="text-left p-3">Source</th>
+                                <th class="text-left p-3">Event Type</th>
+                                <th class="text-left p-3">Severity</th>
+                                <th class="text-left p-3">Description</th>
+                                <th class="text-left p-3">Status</th>
+                                <th class="text-left p-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-table-body">
+                            <!-- Events will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Investigation Tools Tab -->
+            <div id="investigation-tab" class="tab-content">
+                <h2 class="text-xl font-bold text-white mb-6">Digital Forensics & Investigation Tools</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">🔍 Log Analysis</h3>
+                        <div class="space-y-2">
+                            <input type="text" placeholder="Search logs..." class="w-full p-2 bg-slate-700 text-white rounded">
+                            <div class="flex gap-2">
+                                <input type="datetime-local" class="flex-1 p-2 bg-slate-700 text-white rounded">
+                                <input type="datetime-local" class="flex-1 p-2 bg-slate-700 text-white rounded">
+                            </div>
+                            <button class="btn-soc w-full">Search Logs</button>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">🌐 Network Analysis</h3>
+                        <div class="space-y-2">
+                            <input type="text" placeholder="IP Address or hostname" class="w-full p-2 bg-slate-700 text-white rounded">
+                            <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                <option>Last 1 hour</option>
+                                <option>Last 6 hours</option>
+                                <option>Last 24 hours</option>
+                                <option>Last 7 days</option>
+                            </select>
+                            <button class="btn-soc w-full">Analyze Traffic</button>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">🔬 Malware Analysis</h3>
+                        <div class="space-y-2">
+                            <div class="border-2 border-dashed border-slate-600 p-4 text-center rounded">
+                                <p class="text-slate-400">Drop file here or click to upload</p>
+                            </div>
+                            <button class="btn-soc w-full">Analyze Sample</button>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">📧 Email Analysis</h3>
+                        <div class="space-y-2">
+                            <textarea placeholder="Paste email headers..." class="w-full p-2 bg-slate-700 text-white rounded h-20"></textarea>
+                            <button class="btn-soc w-full">Analyze Headers</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compliance Monitoring Tab -->
+            <div id="compliance-tab" class="tab-content">
+                <h2 class="text-xl font-bold text-white mb-6">Compliance & Governance Monitoring</h2>
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">📋 BIO 2.0 Compliance</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm">Access Control</span>
+                                <span class="text-green-400">✓ Compliant</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Incident Management</span>
+                                <span class="text-green-400">✓ Compliant</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Logging & Monitoring</span>
+                                <span class="text-yellow-400">⚠ Partial</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Backup & Recovery</span>
+                                <span class="text-red-400">✗ Non-Compliant</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">🛡️ NIS2 Requirements</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm">Incident Reporting</span>
+                                <span class="text-green-400">✓ Active</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Risk Assessment</span>
+                                <span class="text-green-400">✓ Current</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Supply Chain Security</span>
+                                <span class="text-yellow-400">⚠ In Progress</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Crisis Management</span>
+                                <span class="text-green-400">✓ Tested</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-3">🔒 GDPR Monitoring</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-sm">Data Processing</span>
+                                <span class="text-green-400">✓ Monitored</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Access Requests</span>
+                                <span class="text-green-400">✓ Tracked</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Data Breaches</span>
+                                <span class="text-green-400">✓ None Detected</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-sm">Consent Management</span>
+                                <span class="text-yellow-400">⚠ Review Required</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports & Analytics Tab -->
+            <div id="reports-tab" class="tab-content">
+                <h2 class="text-xl font-bold text-white mb-6">Security Reports & Analytics</h2>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-4">📊 Threat Trends</h3>
+                        <canvas id="threat-trends-chart" height="200"></canvas>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-4">🎯 Attack Vectors</h3>
+                        <canvas id="attack-vectors-chart" height="200"></canvas>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-4">📈 Incident Response Times</h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span>Average Detection Time</span>
+                                <span class="text-blue-400 font-bold">3.7 min</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Average Response Time</span>
+                                <span class="text-yellow-400 font-bold">12.3 min</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Average Resolution Time</span>
+                                <span class="text-green-400 font-bold">2.4 hours</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>SLA Compliance</span>
+                                <span class="text-green-400 font-bold">94.2%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-4">
+                        <h3 class="font-bold text-white mb-4">🔍 Top Indicators</h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between p-2 bg-red-900/20 rounded">
+                                <span>185.124.67.89</span>
+                                <span class="text-red-400">Malicious IP</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-orange-900/20 rounded">
+                                <span>invoice_2024.pdf.exe</span>
+                                <span class="text-orange-400">Suspicious File</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-yellow-900/20 rounded">
+                                <span>powershell.exe -enc</span>
+                                <span class="text-yellow-400">Encoded Command</span>
+                            </div>
+                            <div class="flex justify-between p-2 bg-purple-900/20 rounded">
+                                <span>cryptolocker.c2domain.com</span>
+                                <span class="text-purple-400">C2 Domain</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Incident Modal -->
+    <div id="incident-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">🎯 Incident Details</h2>
+                <button class="text-slate-400 hover:text-white text-2xl" onclick="closeIncidentModal()">&times;</button>
+            </div>
+            <div id="incident-modal-content">
+                <!-- Incident details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Detail Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-white">🚨 Security Alert Details</h2>
+                <button class="text-slate-400 hover:text-white text-2xl" onclick="closeAlertModal()">&times;</button>
+            </div>
+            <div id="alert-modal-content">
+                <!-- Alert details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let socData = {
+            alerts: [],
+            incidents: [],
+            events: [],
+            metrics: {
+                activeThreats: 0,
+                alerts24h: 0,
+                eventsPerSecond: 0,
+                systemsMonitored: 847
+            },
+            networkNodes: [],
+            threatIntel: []
+        };
+        
+        let charts = {};
+        let isConsolePaused = false;
+        let updateInterval;
+
+        // Purple Fish integration
+        const PURPLE_FISH_KEY = 'purpleFishDatabase';
+        const SOC_DATA_KEY = 'socSiemData';
+
+        // Initialize SOC-SIEM
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSOC();
+            loadPurpleFishIntegration();
+            startRealTimeUpdates();
+            setupCharts();
+            generateInitialData();
+        });
+
+        function initializeSOC() {
+            // Load existing SOC data or create new
+            const existingData = localStorage.getItem(SOC_DATA_KEY);
+            if (existingData) {
+                socData = {...socData, ...JSON.parse(existingData)};
+            }
+            
+            // Initialize network topology
+            createNetworkTopology();
+            updateMetrics();
+            updateLastUpdateTime();
+        }
+
+        function loadPurpleFishIntegration() {
+            // Listen for Purple Fish data changes
+            window.addEventListener('storage', (event) => {
+                if (event.key === PURPLE_FISH_KEY) {
+                    console.log('Purple Fish data updated - syncing SOC data');
+                    syncWithPurpleFish();
+                }
+            });
+
+            // Initial sync
+            syncWithPurpleFish();
+        }
+
+        function syncWithPurpleFish() {
+            const purpleFishData = localStorage.getItem(PURPLE_FISH_KEY);
+            if (!purpleFishData) return;
+
+            try {
+                const data = JSON.parse(purpleFishData);
+                
+                // Sync applications with monitored systems
+                if (data.applications) {
+                    socData.metrics.systemsMonitored = data.applications.length + 147; // Base infrastructure
+                    
+                    // Generate alerts for high-risk applications
+                    data.applications.forEach(app => {
+                        if (app.vulnerabilities && app.vulnerabilities.length > 0) {
+                            generateVulnerabilityAlert(app);
+                        }
+                        
+                        if (app.compliance && app.compliance.bio < 50) {
+                            generateComplianceAlert(app);
+                        }
+                    });
+                }
+                
+                // Sync directies for organizational context
+                if (data.directies) {
+                    data.directies.forEach(directie => {
+                        if (directie.ficRisks) {
+                            directie.ficRisks.forEach(risk => {
+                                if (risk.BrutoRisicoScore > 15) {
+                                    generateRiskAlert(directie, risk);
+                                }
+                            });
+                        }
+                    });
+                }
+                
+                updateDisplay();
+                saveSOCData();
+                
+            } catch (error) {
+                console.error('Error syncing with Purple Fish:', error);
+            }
+        }
+
+        function generateVulnerabilityAlert(app) {
+            const alertId = 'vuln_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const alert = {
+                id: alertId,
+                timestamp: new Date().toISOString(),
+                type: 'Vulnerability',
+                severity: 'high',
+                source: app.name,
+                title: `Critical Vulnerability Detected`,
+                description: `Application ${app.name} has ${app.vulnerabilities.length} known vulnerabilities including CVE-2025 series`,
+                status: 'open',
+                assignee: 'SOC Team',
+                data: {
+                    application: app.name,
+                    vulnerabilities: app.vulnerabilities,
+                    directie: app.ownerDirectieId
+                }
+            };
+            
+            // Only add if not already exists
+            if (!socData.alerts.find(a => a.source === app.name && a.type === 'Vulnerability')) {
+                socData.alerts.unshift(alert);
+                logToConsole(`[CRITICAL] Vulnerability alert generated for ${app.name}`);
+            }
+        }
+
+        function generateComplianceAlert(app) {
+            const alertId = 'comp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const alert = {
+                id: alertId,
+                timestamp: new Date().toISOString(),
+                type: 'Compliance',
+                severity: 'medium',
+                source: app.name,
+                title: `Compliance Violation`,
+                description: `Application ${app.name} has BIO compliance score of ${app.compliance.bio}% - below acceptable threshold`,
+                status: 'open',
+                assignee: 'Compliance Team',
+                data: {
+                    application: app.name,
+                    bioScore: app.compliance.bio,
+                    directie: app.ownerDirectieId
+                }
+            };
+            
+            if (!socData.alerts.find(a => a.source === app.name && a.type === 'Compliance')) {
+                socData.alerts.unshift(alert);
+                logToConsole(`[WARNING] Compliance alert generated for ${app.name}`);
+            }
+        }
+
+        function generateRiskAlert(directie, risk) {
+            const alertId = 'risk_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const alert = {
+                id: alertId,
+                timestamp: new Date().toISOString(),
+                type: 'Risk Management',
+                severity: 'high',
+                source: directie.name,
+                title: `High Risk Identified`,
+                description: `${directie.name}: ${risk.description} (Score: ${risk.BrutoRisicoScore})`,
+                status: 'open',
+                assignee: 'Risk Team',
+                data: {
+                    directie: directie.name,
+                    riskScore: risk.BrutoRisicoScore,
+                    riskDescription: risk.description
+                }
+            };
+            
+            if (!socData.alerts.find(a => a.data?.riskDescription === risk.description)) {
+                socData.alerts.unshift(alert);
+                logToConsole(`[HIGH] Risk alert generated for ${directie.name}`);
+            }
+        }
+
+        function startRealTimeUpdates() {
+            updateInterval = setInterval(() => {
+                generateRandomAlert();
+                updateMetrics();
+                updateEventsPerSecond();
+                updateNetworkThreats();
+                updateThreatIntelligence();
+                updateLastUpdateTime();
+                updateDisplay();
+                saveSOCData();
+            }, 5000); // Update every 5 seconds
+        }
+
+        function generateRandomAlert() {
+            const alertTypes = [
+                {type: 'Malware', severity: 'critical', sources: ['Email Gateway', 'Endpoint Protection', 'Web Filter']},
+                {type: 'Intrusion Attempt', severity: 'high', sources: ['Firewall', 'IDS', 'Network Monitor']},
+                {type: 'Suspicious Activity', severity: 'medium', sources: ['User Behavior Analytics', 'SIEM', 'Log Analysis']},
+                {type: 'Policy Violation', severity: 'low', sources: ['DLP', 'Access Control', 'Audit System']},
+                {type: 'Phishing', severity: 'high', sources: ['Email Security', 'Web Protection', 'User Report']},
+                {type: 'Data Exfiltration', severity: 'critical', sources: ['DLP', 'Network Monitor', 'Database Security']},
+                {type: 'Privilege Escalation', severity: 'high', sources: ['IAM', 'Security Audit', 'Privilege Monitor']},
+                {type: 'Anomalous Network Traffic', severity: 'medium', sources: ['Network Analysis', 'Traffic Monitor', 'IDS']}
+            ];
+
+            // Generate alert with 30% probability
+            if (Math.random() < 0.3) {
+                const alertType = alertTypes[Math.floor(Math.random() * alertTypes.length)];
+                const source = alertType.sources[Math.floor(Math.random() * alertType.sources.length)];
+                
+                const alert = {
+                    id: 'alert_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                    timestamp: new Date().toISOString(),
+                    type: alertType.type,
+                    severity: alertType.severity,
+                    source: source,
+                    title: generateAlertTitle(alertType.type),
+                    description: generateAlertDescription(alertType.type, source),
+                    status: 'open',
+                    assignee: 'Auto-assigned'
+                };
+                
+                socData.alerts.unshift(alert);
+                
+                // Keep only last 50 alerts
+                if (socData.alerts.length > 50) {
+                    socData.alerts = socData.alerts.slice(0, 50);
+                }
+                
+                logToConsole(`[${alertType.severity.toUpperCase()}] ${alertType.type}: ${alert.title}`);
+                
+                // Update metrics
+                socData.metrics.alerts24h++;
+                if (alertType.severity === 'critical' || alertType.severity === 'high') {
+                    socData.metrics.activeThreats++;
+                }
+            }
+        }
+
+        function generateAlertTitle(type) {
+            const titles = {
+                'Malware': ['Ransomware signature detected', 'Trojan activity identified', 'Malicious payload intercepted'],
+                'Intrusion Attempt': ['Unauthorized access attempt', 'Brute force attack detected', 'Port scanning activity'],
+                'Suspicious Activity': ['Unusual login pattern', 'After-hours system access', 'Privilege misuse detected'],
+                'Policy Violation': ['Unauthorized software installation', 'Data access policy breach', 'Security control bypass'],
+                'Phishing': ['Phishing email intercepted', 'Credential harvesting attempt', 'Social engineering detected'],
+                'Data Exfiltration': ['Large data transfer detected', 'Unauthorized data access', 'Sensitive data exposure'],
+                'Privilege Escalation': ['Admin privilege abuse', 'Unauthorized elevation', 'Service account misuse'],
+                'Anomalous Network Traffic': ['Unusual traffic pattern', 'C2 communication detected', 'Data tunneling activity']
+            };
+            
+            const typeMessages = titles[type] || ['Security event detected'];
+            return typeMessages[Math.floor(Math.random() * typeMessages.length)];
+        }
+
+        function generateAlertDescription(type, source) {
+            const ips = ['10.1.15.23', '192.168.1.45', '172.16.0.87', '10.0.50.12', '192.168.100.34'];
+            const users = ['j.peters@gemeente.nl', 'admin.account', 'service.backup', 'm.janssen@gemeente.nl', 'temp.user'];
+            const files = ['document.pdf.exe', 'invoice_2024.doc', 'backup.zip', 'config.tmp', 'update.msi'];
+            
+            const ip = ips[Math.floor(Math.random() * ips.length)];
+            const user = users[Math.floor(Math.random() * users.length)];
+            const file = files[Math.floor(Math.random() * files.length)];
+            
+            const descriptions = {
+                'Malware': `Detected malicious file "${file}" from source ${ip}. Immediate quarantine recommended.`,
+                'Intrusion Attempt': `Multiple failed authentication attempts from ${ip} targeting user ${user}.`,
+                'Suspicious Activity': `User ${user} accessing systems outside normal business hours from ${ip}.`,
+                'Policy Violation': `Unauthorized installation of "${file}" by user ${user} on workstation ${ip}.`,
+                'Phishing': `Phishing email containing suspicious link intercepted. Target user: ${user}.`,
+                'Data Exfiltration': `Large volume data transfer (2.3GB) initiated by ${user} to external IP ${ip}.`,
+                'Privilege Escalation': `User ${user} attempted unauthorized privilege escalation on system ${ip}.`,
+                'Anomalous Network Traffic': `Unusual network pattern detected: ${ip} communicating with suspicious external hosts.`
+            };
+            
+            return descriptions[type] || `Security event detected from ${source} involving ${ip}.`;
+        }
+
+        function updateMetrics() {
+            // Update live counters with animation
+            const activeThreatsEl = document.getElementById('active-threats');
+            const alerts24hEl = document.getElementById('alerts-24h');
+            const systemsEl = document.getElementById('systems-monitored');
+            
+            animateCounter(activeThreatsEl, socData.metrics.activeThreats);
+            animateCounter(alerts24hEl, socData.metrics.alerts24h);
+            animateCounter(systemsEl, socData.metrics.systemsMonitored);
+        }
+
+        function animateCounter(element, newValue) {
+            if (!element) return;
+            
+            element.textContent = newValue;
+            element.classList.add('updated');
+            setTimeout(() => {
+                element.classList.remove('updated');
+            }, 500);
+        }
+
+        function updateEventsPerSecond() {
+            const newEPS = Math.floor(Math.random() * 150) + 50;
+            socData.metrics.eventsPerSecond = newEPS;
+            animateCounter(document.getElementById('events-sec'), newEPS);
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('last-update').textContent = now.toLocaleTimeString('nl-NL');
+        }
+
+        function logToConsole(message) {
+            if (isConsolePaused) return;
+            
+            const console = document.getElementById('security-console');
+            if (!console) return;
+            
+            const timestamp = new Date().toLocaleTimeString('nl-NL');
+            const logEntry = `[${timestamp}] ${message}<br>`;
+            
+            console.innerHTML += logEntry;
+            console.scrollTop = console.scrollHeight;
+            
+            // Keep only last 100 lines
+            const lines = console.innerHTML.split('<br>');
+            if (lines.length > 100) {
+                console.innerHTML = lines.slice(-100).join('<br>');
+            }
+        }
+
+        function updateDisplay() {
+            updateAlertsDisplay();
+            updateIncidentsDisplay();
+            updateEventsTable();
+            updateThreatIntelDisplay();
+        }
+
+        function updateAlertsDisplay() {
+            const container = document.getElementById('alerts-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            const recentAlerts = socData.alerts.slice(0, 10);
+            recentAlerts.forEach(alert => {
+                const alertEl = document.createElement('div');
+                alertEl.className = `p-3 rounded border-l-4 cursor-pointer transition-all ${getSeverityClasses(alert.severity)}`;
+                if (alert.severity === 'critical') {
+                    alertEl.classList.add('alert-flash');
+                }
+                
+                alertEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="status-dot ${getSeverityDotClass(alert.severity)}"></span>
+                                <span class="font-semibold text-sm">${alert.title}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 mb-1">${alert.source} • ${new Date(alert.timestamp).toLocaleTimeString('nl-NL')}</div>
+                            <div class="text-xs">${alert.description.substring(0, 80)}...</div>
+                        </div>
+                        <div class="ml-2">
+                            <span class="px-2 py-1 text-xs rounded ${getSeverityBadgeClass(alert.severity)}">${alert.severity.toUpperCase()}</span>
+                        </div>
+                    </div>
+                `;
+                
+                alertEl.onclick = () => openAlertModal(alert);
+                container.appendChild(alertEl);
+            });
+        }
+
+        function updateIncidentsDisplay() {
+            const container = document.getElementById('incidents-list');
+            if (!container) return;
+            
+            // Generate some sample incidents if none exist
+            if (socData.incidents.length === 0) {
+                socData.incidents = [
+                    {
+                        id: 'INC-2025-001',
+                        title: 'Ransomware Attack - Finance Department',
+                        status: 'investigating',
+                        severity: 'critical',
+                        assignee: 'J. van der Berg',
+                        created: new Date(Date.now() - 3600000).toISOString()
+                    },
+                    {
+                        id: 'INC-2025-002',
+                        title: 'Phishing Campaign Targeting HR',
+                        status: 'containment',
+                        severity: 'high',
+                        assignee: 'M. Peters',
+                        created: new Date(Date.now() - 7200000).toISOString()
+                    }
+                ];
+            }
+            
+            container.innerHTML = '';
+            socData.incidents.forEach(incident => {
+                const incidentEl = document.createElement('div');
+                incidentEl.className = `p-3 bg-slate-800/50 rounded border-l-4 cursor-pointer transition-all ${getSeverityClasses(incident.severity)}`;
+                
+                incidentEl.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-semibold text-sm">${incident.id}</span>
+                        <span class="px-2 py-1 text-xs rounded ${getSeverityBadgeClass(incident.severity)}">${incident.severity.toUpperCase()}</span>
+                    </div>
+                    <div class="text-sm mb-1">${incident.title}</div>
+                    <div class="flex justify-between items-center text-xs text-slate-400">
+                        <span>Assigned: ${incident.assignee}</span>
+                        <span class="capitalize">${incident.status}</span>
+                    </div>
+                `;
+                
+                incidentEl.onclick = () => openIncidentModal(incident);
+                container.appendChild(incidentEl);
+            });
+        }
+
+        function updateEventsTable() {
+            const tbody = document.getElementById('events-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            
+            // Convert alerts to events for the table
+            socData.alerts.slice(0, 20).forEach(alert => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-700 hover:bg-slate-800/30';
+                
+                row.innerHTML = `
+                    <td class="p-3 text-sm mono">${new Date(alert.timestamp).toLocaleString('nl-NL')}</td>
+                    <td class="p-3 text-sm">${alert.source}</td>
+                    <td class="p-3 text-sm">${alert.type}</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded ${getSeverityBadgeClass(alert.severity)}">${alert.severity.toUpperCase()}</span>
+                    </td>
+                    <td class="p-3 text-sm">${alert.description.substring(0, 60)}...</td>
+                    <td class="p-3">
+                        <span class="px-2 py-1 text-xs rounded ${alert.status === 'open' ? 'bg-red-900 text-red-200' : 'bg-green-900 text-green-200'}">${alert.status.toUpperCase()}</span>
+                    </td>
+                    <td class="p-3">
+                        <button class="btn-soc text-xs p-1" onclick="acknowledgeAlert('${alert.id}')">ACK</button>
+                        <button class="btn-danger text-xs p-1 ml-1" onclick="escalateAlert('${alert.id}')">Escalate</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateThreatIntelDisplay() {
+            const container = document.getElementById('threat-intel');
+            if (!container) return;
+            
+            // Generate threat intelligence if none exists
+            if (socData.threatIntel.length === 0) {
+                socData.threatIntel = [
+                    {
+                        type: 'IOC',
+                        indicator: 'MD5: a1b2c3d4e5f6789012345678901234ab',
+                        description: 'Known ransomware signature',
+                        confidence: 'high'
+                    },
+                    {
+                        type: 'Domain',
+                        indicator: 'malicious-update.example[.]com',
+                        description: 'C2 infrastructure for APT group',
+                        confidence: 'medium'
+                    },
+                    {
+                        type: 'IP',
+                        indicator: '185.234.67.89',
+                        description: 'Scanning for vulnerable RDP services',
+                        confidence: 'high'
+                    }
+                ];
+            }
+            
+            container.innerHTML = '';
+            socData.threatIntel.forEach(intel => {
+                const intelEl = document.createElement('div');
+                intelEl.className = 'p-2 bg-slate-800/30 rounded';
+                
+                const confidenceColor = intel.confidence === 'high' ? 'text-red-400' : 
+                                       intel.confidence === 'medium' ? 'text-yellow-400' : 'text-blue-400';
+                
+                intelEl.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-xs font-semibold text-blue-300">${intel.type}</span>
+                        <span class="text-xs ${confidenceColor}">${intel.confidence.toUpperCase()}</span>
+                    </div>
+                    <div class="text-xs mono text-slate-200 mb-1">${intel.indicator}</div>
+                    <div class="text-xs text-slate-400">${intel.description}</div>
+                `;
+                
+                container.appendChild(intelEl);
+            });
+        }
+
+        function createNetworkTopology() {
+            const mapContainer = document.getElementById('network-map');
+            if (!mapContainer) return;
+            
+            // Clear existing nodes
+            mapContainer.innerHTML = '';
+            
+            // Define network nodes
+            const nodes = [
+                {id: 'fw-1', type: 'firewall', x: 50, y: 50, label: 'FW'},
+                {id: 'srv-web', type: 'server', x: 150, y: 100, label: 'WEB'},
+                {id: 'srv-db', type: 'server', x: 250, y: 100, label: 'DB'},
+                {id: 'srv-mail', type: 'server', x: 350, y: 100, label: 'MAIL'},
+                {id: 'ws-1', type: 'workstation', x: 100, y: 200, label: 'WS1'},
+                {id: 'ws-2', type: 'workstation', x: 200, y: 200, label: 'WS2'},
+                {id: 'ws-3', type: 'workstation', x: 300, y: 200, label: 'WS3'},
+                {id: 'rtr-1', type: 'router', x: 400, y: 50, label: 'RTR'}
+            ];
+            
+            socData.networkNodes = nodes;
+            
+            nodes.forEach(node => {
+                const nodeEl = document.createElement('div');
+                nodeEl.className = `network-node node-${node.type}`;
+                nodeEl.style.left = node.x + 'px';
+                nodeEl.style.top = node.y + 'px';
+                nodeEl.textContent = node.label;
+                nodeEl.title = `${node.type.toUpperCase()}: ${node.id}`;
+                
+                nodeEl.onclick = () => showNodeDetails(node);
+                mapContainer.appendChild(nodeEl);
+            });
+        }
+
+        function updateNetworkThreats() {
+            // Randomly compromise nodes for demonstration
+            socData.networkNodes.forEach(node => {
+                const nodeEl = document.querySelector(`[title="${node.type.toUpperCase()}: ${node.id}"]`);
+                if (!nodeEl) return;
+                
+                // 5% chance to show as compromised, 10% chance to return to normal
+                if (Math.random() < 0.05) {
+                    nodeEl.className = `network-node node-compromised`;
+                    logToConsole(`[CRITICAL] Node ${node.id} shows signs of compromise`);
+                } else if (Math.random() < 0.1) {
+                    nodeEl.className = `network-node node-${node.type}`;
+                }
+            });
+        }
+
+        function updateThreatIntelligence() {
+            // Periodically add new threat intelligence
+            if (Math.random() < 0.2) {
+                const newIntel = generateThreatIntel();
+                socData.threatIntel.unshift(newIntel);
+                
+                // Keep only last 10 items
+                if (socData.threatIntel.length > 10) {
+                    socData.threatIntel = socData.threatIntel.slice(0, 10);
+                }
+                
+                logToConsole(`[INTEL] New threat indicator: ${newIntel.indicator}`);
+            }
+        }
+
+        function generateThreatIntel() {
+            const types = ['IOC', 'Domain', 'IP', 'URL'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            const indicators = {
+                'IOC': [`MD5: ${generateRandomHash()}`, `SHA256: ${generateRandomHash(64)}`],
+                'Domain': ['suspicious-update.example[.]com', 'malware-c2.bad-domain[.]org', 'phishing-bank.fake-site[.]net'],
+                'IP': ['185.234.67.89', '192.0.2.45', '203.0.113.12', '198.51.100.67'],
+                'URL': ['hxxp://malicious[.]site/payload.exe', 'hxxps://fake-bank[.]com/login', 'hxxp://c2-server[.]net/callback']
+            };
+            
+            const descriptions = {
+                'IOC': 'Malware hash detected in network traffic',
+                'Domain': 'Command & control infrastructure',
+                'IP': 'Scanning for vulnerable services',
+                'URL': 'Malicious payload distribution'
+            };
+            
+            const confidences = ['high', 'medium', 'low'];
+            const indicator = indicators[type][Math.floor(Math.random() * indicators[type].length)];
+            
+            return {
+                type: type,
+                indicator: indicator,
+                description: descriptions[type],
+                confidence: confidences[Math.floor(Math.random() * confidences.length)],
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        function generateRandomHash(length = 32) {
+            const chars = '0123456789abcdef';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // Utility functions for styling
+        function getSeverityClasses(severity) {
+            switch (severity) {
+                case 'critical': return 'border-red-500 bg-red-900/20';
+                case 'high': return 'border-orange-500 bg-orange-900/20';
+                case 'medium': return 'border-yellow-500 bg-yellow-900/20';
+                case 'low': return 'border-blue-500 bg-blue-900/20';
+                default: return 'border-gray-500 bg-gray-900/20';
+            }
+        }
+
+        function getSeverityDotClass(severity) {
+            switch (severity) {
+                case 'critical': return 'status-critical';
+                case 'high': return 'status-critical';
+                case 'medium': return 'status-warning';
+                case 'low': return 'status-info';
+                default: return 'status-info';
+            }
+        }
+
+        function getSeverityBadgeClass(severity) {
+            switch (severity) {
+                case 'critical': return 'bg-red-900 text-red-200';
+                case 'high': return 'bg-orange-900 text-orange-200';
+                case 'medium': return 'bg-yellow-900 text-yellow-200';
+                case 'low': return 'bg-blue-900 text-blue-200';
+                default: return 'bg-gray-900 text-gray-200';
+            }
+        }
+
+        // Modal functions
+        function openIncidentModal(incident = null) {
+            const modal = document.getElementById('incident-modal');
+            const content = document.getElementById('incident-modal-content');
+            
+            if (incident) {
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">Incident ID</label>
+                                <input type="text" value="${incident.id}" class="w-full p-2 bg-slate-700 text-white rounded" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">Severity</label>
+                                <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                    <option value="critical" ${incident.severity === 'critical' ? 'selected' : ''}>Critical</option>
+                                    <option value="high" ${incident.severity === 'high' ? 'selected' : ''}>High</option>
+                                    <option value="medium" ${incident.severity === 'medium' ? 'selected' : ''}>Medium</option>
+                                    <option value="low" ${incident.severity === 'low' ? 'selected' : ''}>Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Title</label>
+                            <input type="text" value="${incident.title}" class="w-full p-2 bg-slate-700 text-white rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Status</label>
+                            <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                <option value="new" ${incident.status === 'new' ? 'selected' : ''}>New</option>
+                                <option value="investigating" ${incident.status === 'investigating' ? 'selected' : ''}>Investigating</option>
+                                <option value="containment" ${incident.status === 'containment' ? 'selected' : ''}>Containment</option>
+                                <option value="eradication" ${incident.status === 'eradication' ? 'selected' : ''}>Eradication</option>
+                                <option value="recovery" ${incident.status === 'recovery' ? 'selected' : ''}>Recovery</option>
+                                <option value="closed" ${incident.status === 'closed' ? 'selected' : ''}>Closed</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Assigned To</label>
+                            <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                <option value="J. van der Berg" ${incident.assignee === 'J. van der Berg' ? 'selected' : ''}>J. van der Berg</option>
+                                <option value="M. Peters" ${incident.assignee === 'M. Peters' ? 'selected' : ''}>M. Peters</option>
+                                <option value="S. de Vries" ${incident.assignee === 'S. de Vries' ? 'selected' : ''}>S. de Vries</option>
+                                <option value="SOC Team" ${incident.assignee === 'SOC Team' ? 'selected' : ''}>SOC Team</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Description</label>
+                            <textarea class="w-full p-2 bg-slate-700 text-white rounded h-24" placeholder="Incident description and analysis..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Response Actions</label>
+                            <textarea class="w-full p-2 bg-slate-700 text-white rounded h-20" placeholder="Actions taken and next steps..."></textarea>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn-soc flex-1">Update Incident</button>
+                            <button class="btn-danger" onclick="closeIncidentModal()">Close</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // New incident form
+                content.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">Incident ID</label>
+                                <input type="text" value="INC-${new Date().getFullYear()}-${String(socData.incidents.length + 1).padStart(3, '0')}" class="w-full p-2 bg-slate-700 text-white rounded" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-2">Severity</label>
+                                <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="low">Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Title</label>
+                            <input type="text" placeholder="Brief incident description" class="w-full p-2 bg-slate-700 text-white rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Type</label>
+                            <select class="w-full p-2 bg-slate-700 text-white rounded">
+                                <option value="malware">Malware Incident</option>
+                                <option value="phishing">Phishing Attack</option>
+                                <option value="breach">Data Breach</option>
+                                <option value="dos">Denial of Service</option>
+                                <option value="unauthorized">Unauthorized Access</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-300 mb-2">Initial Description</label>
+                            <textarea class="w-full p-2 bg-slate-700 text-white rounded h-24" placeholder="Describe what happened..."></textarea>
+                        </div>
+                        <div class="flex gap-3">
+                            <button class="btn-soc flex-1" onclick="createNewIncident()">Create Incident</button>
+                            <button class="btn-danger" onclick="closeIncidentModal()">Cancel</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeIncidentModal() {
+            document.getElementById('incident-modal').style.display = 'none';
+        }
+
+        function openAlertModal(alert) {
+            const modal = document.getElementById('alert-modal');
+            const content = document.getElementById('alert-modal-content');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 rounded ${getSeverityClasses(alert.severity)}">
+                        <div class="flex items-center gap-3">
+                            <span class="status-dot ${getSeverityDotClass(alert.severity)}"></span>
+                            <div>
+                                <div class="font-bold text-lg">${alert.title}</div>
+                                <div class="text-sm text-slate-400">${alert.source} • ${new Date(alert.timestamp).toLocaleString('nl-NL')}</div>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded ${getSeverityBadgeClass(alert.severity)} font-bold">${alert.severity.toUpperCase()}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">Alert ID</label>
+                                <div class="text-slate-200 font-mono text-sm">${alert.id}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">Type</label>
+                                <div class="text-slate-200">${alert.type}</div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">Status</label>
+                                <select class="w-full p-2 bg-slate-700 text-white rounded text-sm">
+                                    <option value="open" ${alert.status === 'open' ? 'selected' : ''}>Open</option>
+                                    <option value="investigating" ${alert.status === 'investigating' ? 'selected' : ''}>Investigating</option>
+                                    <option value="acknowledged" ${alert.status === 'acknowledged' ? 'selected' : ''}>Acknowledged</option>
+                                    <option value="resolved" ${alert.status === 'resolved' ? 'selected' : ''}>Resolved</option>
+                                    <option value="false_positive" ${alert.status === 'false_positive' ? 'selected' : ''}>False Positive</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">Assigned To</label>
+                                <select class="w-full p-2 bg-slate-700 text-white rounded text-sm">
+                                    <option value="Auto-assigned" ${alert.assignee === 'Auto-assigned' ? 'selected' : ''}>Auto-assigned</option>
+                                    <option value="SOC Team" ${alert.assignee === 'SOC Team' ? 'selected' : ''}>SOC Team</option>
+                                    <option value="J. van der Berg" ${alert.assignee === 'J. van der Berg' ? 'selected' : ''}>J. van der Berg</option>
+                                    <option value="M. Peters" ${alert.assignee === 'M. Peters' ? 'selected' : ''}>M. Peters</option>
+                                    <option value="S. de Vries" ${alert.assignee === 'S. de Vries' ? 'selected' : ''}>S. de Vries</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">Priority</label>
+                                <select class="w-full p-2 bg-slate-700 text-white rounded text-sm">
+                                    <option value="p1">P1 - Critical</option>
+                                    <option value="p2" selected>P2 - High</option>
+                                    <option value="p3">P3 - Medium</option>
+                                    <option value="p4">P4 - Low</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-300 mb-1">SLA</label>
+                                <div class="text-slate-200 text-sm">Response: 15 min | Resolution: 4 hours</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-2">Description</label>
+                        <div class="p-3 bg-slate-800 rounded text-sm text-slate-200">${alert.description}</div>
+                    </div>
+                    
+                    ${alert.data ? `
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-2">Additional Data</label>
+                        <div class="p-3 bg-slate-800 rounded text-sm">
+                            <pre class="text-slate-200 font-mono">${JSON.stringify(alert.data, null, 2)}</pre>
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-300 mb-2">Analysis Notes</label>
+                        <textarea class="w-full p-3 bg-slate-700 text-white rounded h-20 text-sm" placeholder="Add investigation notes and analysis..."></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button class="btn-soc flex-1" onclick="updateAlert('${alert.id}')">Update Alert</button>
+                        <button class="btn-soc" onclick="escalateToIncident('${alert.id}')">Create Incident</button>
+                        <button class="btn-danger" onclick="closeAlertModal()">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            modal.style.display = 'flex';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alert-modal').style.display = 'none';
+        }
+
+        // Chart setup
+        function setupCharts() {
+            setupTimelineChart();
+            setupThreatTrendsChart();
+            setupAttackVectorsChart();
+        }
+
+        function setupTimelineChart() {
+            const ctx = document.getElementById('timeline-chart');
+            if (!ctx) return;
+            
+            const now = new Date();
+            const labels = [];
+            const data = [];
+            
+            for (let i = 23; i >= 0; i--) {
+                const hour = new Date(now.getTime() - i * 60 * 60 * 1000);
+                labels.push(hour.getHours() + ':00');
+                data.push(Math.floor(Math.random() * 50) + 10);
+            }
+            
+            charts.timeline = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Security Events',
+                        data: data,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e2e8f0' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupThreatTrendsChart() {
+            const ctx = document.getElementById('threat-trends-chart');
+            if (!ctx) return;
+            
+            charts.threatTrends = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Malware', 'Phishing', 'Intrusion', 'DDoS', 'Data Theft'],
+                    datasets: [{
+                        label: 'Incidents',
+                        data: [15, 32, 8, 3, 5],
+                        backgroundColor: [
+                            '#ef4444',
+                            '#f59e0b', 
+                            '#8b5cf6',
+                            '#06b6d4',
+                            '#10b981'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { display: false }
+                        },
+                        y: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function setupAttackVectorsChart() {
+            const ctx = document.getElementById('attack-vectors-chart');
+            if (!ctx) return;
+            
+            charts.attackVectors = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Email', 'Web', 'Network', 'Endpoint', 'Mobile'],
+                    datasets: [{
+                        data: [40, 25, 15, 15, 5],
+                        backgroundColor: [
+                            '#ef4444',
+                            '#f59e0b',
+                            '#3b82f6', 
+                            '#8b5cf6',
+                            '#10b981'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#e2e8f0', padding: 10 }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Action functions
+        function acknowledgeAlert(alertId) {
+            const alert = socData.alerts.find(a => a.id === alertId);
+            if (alert) {
+                alert.status = 'acknowledged';
+                logToConsole(`[INFO] Alert ${alertId} acknowledged`);
+                updateDisplay();
+                saveSOCData();
+            }
+        }
+
+        function escalateAlert(alertId) {
+            const alert = socData.alerts.find(a => a.id === alertId);
+            if (alert) {
+                const incident = {
+                    id: `INC-${new Date().getFullYear()}-${String(socData.incidents.length + 1).padStart(3, '0')}`,
+                    title: `Incident: ${alert.title}`,
+                    status: 'investigating',
+                    severity: alert.severity,
+                    assignee: 'SOC Team',
+                    created: new Date().toISOString(),
+                    relatedAlert: alertId
+                };
+                
+                socData.incidents.unshift(incident);
+                alert.status = 'escalated';
+                
+                logToConsole(`[ESCALATION] Alert ${alertId} escalated to incident ${incident.id}`);
+                updateDisplay();
+                saveSOCData();
+            }
+        }
+
+        function updateAlert(alertId) {
+            logToConsole(`[INFO] Alert ${alertId} updated`);
+            closeAlertModal();
+        }
+
+        function escalateToIncident(alertId) {
+            escalateAlert(alertId);
+            closeAlertModal();
+        }
+
+        function createNewIncident() {
+            logToConsole('[INFO] New incident created manually');
+            closeIncidentModal();
+        }
+
+        function clearAllAlerts() {
+            if (confirm('Are you sure you want to clear all alerts?')) {
+                socData.alerts = [];
+                socData.metrics.activeThreats = 0;
+                logToConsole('[ADMIN] All alerts cleared');
+                updateDisplay();
+                saveSOCData();
+            }
+        }
+
+        function pauseConsole() {
+            isConsolePaused = !isConsolePaused;
+            const btn = event.target;
+            btn.textContent = isConsolePaused ? 'Resume' : 'Pause';
+            logToConsole(`[ADMIN] Console ${isConsolePaused ? 'paused' : 'resumed'}`);
+        }
+
+        function clearConsole() {
+            const console = document.getElementById('security-console');
+            if (console) {
+                console.innerHTML = '[SYSTEM] Console cleared<br>';
+            }
+        }
+
+        function blockIP() {
+            const ip = prompt('Enter IP address to block:');
+            if (ip) {
+                logToConsole(`[BLOCKING] IP ${ip} added to blacklist`);
+            }
+        }
+
+        function quarantineHost() {
+            const host = prompt('Enter hostname or IP to quarantine:');
+            if (host) {
+                logToConsole(`[QUARANTINE] Host ${host} isolated from network`);
+            }
+        }
+
+        function updateRules() {
+            logToConsole('[ADMIN] Security rules updated from threat intelligence');
+        }
+
+        function scanNetwork() {
+            logToConsole('[SCAN] Network vulnerability scan initiated');
+            
+            // Simulate scan results
+            setTimeout(() => {
+                logToConsole('[SCAN] Scan completed - 3 vulnerabilities found');
+            }, 3000);
+        }
+
+        function showNodeDetails(node) {
+            alert(`Node Details:\nID: ${node.id}\nType: ${node.type}\nStatus: Active`);
+        }
+
+        function filterEvents(severity) {
+            // Filter events table by severity
+            updateEventsTable();
+        }
+
+        function exportEvents() {
+            // Create CSV export
+            const csvContent = "data:text/csv;charset=utf-8," + 
+                "Timestamp,Source,Type,Severity,Description,Status\n" +
+                socData.alerts.map(alert => 
+                    `"${new Date(alert.timestamp).toISOString()}","${alert.source}","${alert.type}","${alert.severity}","${alert.description.replace(/"/g, '""')}","${alert.status}"`
+                ).join('\n');
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', encodeURI(csvContent));
+            link.setAttribute('download', `soc_events_${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+        }
+
+        function switchTab(event, tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function generateInitialData() {
+            // Generate some initial sample data
+            for (let i = 0; i < 10; i++) {
+                generateRandomAlert();
+            }
+            
+            // Set initial metrics
+            socData.metrics.alerts24h = socData.alerts.length;
+            socData.metrics.activeThreats = socData.alerts.filter(a => 
+                a.severity === 'critical' || a.severity === 'high'
+            ).length;
+            
+            updateDisplay();
+        }
+
+        function saveSOCData() {
+            try {
+                localStorage.setItem(SOC_DATA_KEY, JSON.stringify(socData));
+            } catch (error) {
+                console.error('Error saving SOC data:', error);
+            }
+        }
+
+        // Enhanced data export to Purple Fish ecosystem
+        setInterval(() => {
+            exportToPurpleFish();
+        }, 15000); // Export every 15 seconds for better real-time integration
+
+        function exportToPurpleFish() {
+            try {
+                // Create comprehensive SOC metrics for CISO dashboard integration
+                const socMetrics = {
+                    lastUpdate: new Date().toISOString(),
+                    activeThreats: socData.metrics.activeThreats,
+                    alerts24h: socData.metrics.alerts24h,
+                    eventsPerSecond: socData.metrics.eventsPerSecond,
+                    systemsMonitored: socData.metrics.systemsMonitored,
+                    criticalAlerts: socData.alerts.filter(a => a.severity === 'critical').length,
+                    highAlerts: socData.alerts.filter(a => a.severity === 'high').length,
+                    mediumAlerts: socData.alerts.filter(a => a.severity === 'medium').length,
+                    activeIncidents: socData.incidents.filter(i => i.status !== 'closed').length,
+                    
+                    // Detailed alert breakdown for CISO dashboard
+                    alertsByType: {
+                        malware: socData.alerts.filter(a => a.type === 'Malware').length,
+                        phishing: socData.alerts.filter(a => a.type === 'Phishing').length,
+                        intrusion: socData.alerts.filter(a => a.type === 'Intrusion Attempt').length,
+                        compliance: socData.alerts.filter(a => a.type === 'Compliance').length,
+                        vulnerability: socData.alerts.filter(a => a.type === 'Vulnerability').length,
+                        riskManagement: socData.alerts.filter(a => a.type === 'Risk Management').length
+                    },
+                    
+                    // Security posture impact scores
+                    securityImpact: {
+                        operational: calculateOperationalImpact(),
+                        compliance: calculateComplianceImpact(),
+                        risk: calculateRiskImpact()
+                    },
+                    
+                    // Recent significant events for CISO narrative
+                    significantEvents: socData.alerts
+                        .filter(a => a.severity === 'critical' || a.severity === 'high')
+                        .slice(0, 5)
+                        .map(a => ({
+                            type: a.type,
+                            severity: a.severity,
+                            source: a.source,
+                            timestamp: a.timestamp,
+                            impact: a.data ? 'High' : 'Medium'
+                        })),
+                    
+                    // Trend indicators for predictive analysis
+                    trends: {
+                        alertTrend: calculateAlertTrend(),
+                        threatTrend: calculateThreatTrend(),
+                        incidentTrend: calculateIncidentTrend()
+                    },
+                    
+                    // System health indicators
+                    systemHealth: {
+                        firewallStatus: 'operational',
+                        idsStatus: 'operational', 
+                        antivirusStatus: Math.random() > 0.8 ? 'updating' : 'operational',
+                        backupStatus: 'operational',
+                        logCollection: 98.7,
+                        overallHealth: calculateOverallSystemHealth()
+                    }
+                };
+                
+                // Store in multiple keys for different consumers
+                localStorage.setItem('socMetrics', JSON.stringify(socMetrics));
+                localStorage.setItem('socLastUpdate', new Date().toISOString());
+                
+                // Update Purple Fish with SOC integration data
+                updatePurpleFishWithSOCData(socMetrics);
+                
+                console.log('SOC metrics exported to Purple Fish ecosystem');
+            } catch (error) {
+                console.error('Error exporting to Purple Fish:', error);
+            }
+        }
+
+        function calculateOperationalImpact() {
+            const criticalCount = socData.alerts.filter(a => a.severity === 'critical').length;
+            const highCount = socData.alerts.filter(a => a.severity === 'high').length;
+            
+            // Score: 100 = perfect, 0 = critical issues
+            return Math.max(0, 100 - (criticalCount * 15 + highCount * 5));
+        }
+
+        function calculateComplianceImpact() {
+            const complianceAlerts = socData.alerts.filter(a => a.type === 'Compliance').length;
+            return Math.max(0, 100 - (complianceAlerts * 10));
+        }
+
+        function calculateRiskImpact() {
+            const riskAlerts = socData.alerts.filter(a => a.type === 'Risk Management').length;
+            const vulnerabilityAlerts = socData.alerts.filter(a => a.type === 'Vulnerability').length;
+            
+            return Math.max(0, 100 - (riskAlerts * 12 + vulnerabilityAlerts * 8));
+        }
+
+        function calculateAlertTrend() {
+            // Simple trend calculation - compare last hour vs previous hour
+            const now = new Date();
+            const lastHour = socData.alerts.filter(a => 
+                new Date(a.timestamp) > new Date(now.getTime() - 3600000)
+            ).length;
+            
+            return lastHour > 10 ? 'increasing' : lastHour < 3 ? 'decreasing' : 'stable';
+        }
+
+        function calculateThreatTrend() {
+            return socData.metrics.activeThreats > 15 ? 'increasing' : 
+                   socData.metrics.activeThreats < 5 ? 'decreasing' : 'stable';
+        }
+
+        function calculateIncidentTrend() {
+            const activeIncidents = socData.incidents.filter(i => i.status !== 'closed').length;
+            return activeIncidents > 5 ? 'increasing' : 
+                   activeIncidents === 0 ? 'decreasing' : 'stable';
+        }
+
+        function calculateOverallSystemHealth() {
+            const healthFactors = [
+                socData.metrics.eventsPerSecond < 200 ? 100 : 80, // Event processing load
+                socData.alerts.filter(a => a.severity === 'critical').length < 5 ? 100 : 70, // Critical alerts
+                socData.incidents.filter(i => i.status !== 'closed').length < 3 ? 100 : 60 // Active incidents
+            ];
+            
+            return Math.round(healthFactors.reduce((a, b) => a + b) / healthFactors.length);
+        }
+
+        function updatePurpleFishWithSOCData(socMetrics) {
+            try {
+                // Get existing Purple Fish data
+                const purpleFishData = localStorage.getItem(PURPLE_FISH_KEY);
+                if (!purpleFishData) return;
+                
+                const data = JSON.parse(purpleFishData);
+                
+                // Add SOC integration to Purple Fish ecosystem
+                if (!data.socIntegration) {
+                    data.socIntegration = {
+                        version: '1.0',
+                        lastSync: new Date().toISOString(),
+                        metrics: {},
+                        alerts: [],
+                        incidents: [],
+                        systemHealth: {}
+                    };
+                }
+                
+                // Update SOC data in Purple Fish
+                data.socIntegration.metrics = socMetrics;
+                data.socIntegration.lastSync = new Date().toISOString();
+                data.socIntegration.alerts = socData.alerts.slice(0, 20); // Keep latest 20
+                data.socIntegration.incidents = socData.incidents.slice(0, 10); // Keep latest 10
+                data.socIntegration.systemHealth = socMetrics.systemHealth;
+                
+                // Update application security scores based on SOC findings
+                if (data.applications) {
+                    data.applications.forEach(app => {
+                        const appAlerts = socData.alerts.filter(a => 
+                            a.data && (a.data.application === app.name || a.source === app.name)
+                        );
+                        
+                        if (appAlerts.length > 0) {
+                            // Reduce security scores for applications with alerts
+                            const criticalAlerts = appAlerts.filter(a => a.severity === 'critical').length;
+                            const highAlerts = appAlerts.filter(a => a.severity === 'high').length;
+                            
+                            // Impact on KPIs
+                            if (!app.socImpact) app.socImpact = { alerts: 0, lastUpdate: new Date().toISOString() };
+                            app.socImpact.alerts = appAlerts.length;
+                            app.socImpact.criticalAlerts = criticalAlerts;
+                            app.socImpact.highAlerts = highAlerts;
+                            app.socImpact.lastUpdate = new Date().toISOString();
+                            
+                            // Adjust security KPIs based on SOC findings
+                            if (app.kpis) {
+                                app.kpis.tech = Math.max(0, app.kpis.tech - (criticalAlerts * 15 + highAlerts * 5));
+                                app.kpis.risk = Math.min(100, app.kpis.risk + (criticalAlerts * 10 + highAlerts * 3));
+                            }
+                        }
+                    });
+                }
+                
+                // Save updated Purple Fish data
+                localStorage.setItem(PURPLE_FISH_KEY, JSON.stringify(data));
+                
+                console.log('Purple Fish data updated with SOC integration');
+                
+            } catch (error) {
+                console.error('Error updating Purple Fish with SOC data:', error);
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            saveSOCData();
+        });
+    </script>
+</body>
+</html>

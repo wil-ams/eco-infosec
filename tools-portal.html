@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IBAT Tools Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="auth.js"></script>
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        .tool-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+        .tool-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .tool-card.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        .header-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .user-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .notification-badge {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+
+    <!-- Header -->
+    <div class="header-card rounded-2xl shadow-lg p-6 mb-8 max-w-6xl mx-auto">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center space-x-4">
+                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">IBAT Tools Portal</h1>
+                    <p class="text-gray-600">Compliance & Risicomanagement Tools</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <!-- User Info -->
+                <div class="user-info text-white px-4 py-2 rounded-lg">
+                    <div class="text-sm opacity-90">Ingelogd als:</div>
+                    <div class="font-semibold" id="user-name">Gebruiker</div>
+                    <div class="text-xs opacity-75" id="user-directie">Directie</div>
+                </div>
+                
+                <!-- Logout Button -->
+                <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    <span>Uitloggen</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto">
+        
+        <!-- Welcome Message -->
+        <div class="header-card rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">Welkom bij uw IBAT Tools</h2>
+            <p class="text-gray-600">Selecteer een tool om te beginnen met uw compliance en risicomanagement activiteiten. Alle tools zijn vooraf geladen met data specifiek voor uw directie.</p>
+        </div>
+
+        <!-- Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+            
+            <!-- IBH Tool -->
+            <div class="tool-card rounded-xl shadow-lg p-6" data-tool="ibh">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <span class="bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Beschikbaar</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">IBH Tool</h3>
+                <p class="text-gray-600 mb-4">Informatiebeveiliging Handreiking - Controleer en beheer uw BIO-compliance</p>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Laatste update:</span>
+                        <span class="font-medium" id="ibh-last-update">Wordt geladen...</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Compliance score:</span>
+                        <span class="font-medium text-green-600" id="ibh-compliance">Wordt geladen...</span>
+                    </div>
+                </div>
+                
+                <button class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Open IBH Tool
+                </button>
+            </div>
+
+            <!-- DRAAI Tool -->
+            <div class="tool-card rounded-xl shadow-lg p-6" data-tool="draai">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <span class="bg-purple-100 text-purple-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Beschikbaar</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">DRAAI Tool</h3>
+                <p class="text-gray-600 mb-4">Data Risicoanalyse Artificiële Intelligentie - AI risico assessments</p>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">AI Projecten:</span>
+                        <span class="font-medium" id="draai-projects">Wordt geladen...</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Laatste assessment:</span>
+                        <span class="font-medium text-purple-600" id="draai-last-assessment">Wordt geladen...</span>
+                    </div>
+                </div>
+                
+                <button class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Open DRAAI Tool
+                </button>
+            </div>
+
+            <!-- QuickScan Tool -->
+            <div class="tool-card rounded-xl shadow-lg p-6" data-tool="quickscan">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Beschikbaar</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">QuickScan</h3>
+                <p class="text-gray-600 mb-4">Snelle informatiebeveiliging scan voor uw directie processen</p>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Status scan:</span>
+                        <span class="font-medium" id="quickscan-status">Wordt geladen...</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">BBN niveau:</span>
+                        <span class="font-medium text-blue-600" id="quickscan-bbn">Wordt geladen...</span>
+                    </div>
+                </div>
+                
+                <button class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Open QuickScan
+                </button>
+            </div>
+
+            <!-- Stoplicht Rapportage -->
+            <div class="tool-card rounded-xl shadow-lg p-6" data-tool="stoplicht">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="notification-badge w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">Nieuwe data</span>
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Stoplicht Rapportage</h3>
+                <p class="text-gray-600 mb-4">Dashboard met KPI's en status indicatoren voor uw directie</p>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Laatste rapport:</span>
+                        <span class="font-medium" id="stoplicht-last-report">Wordt geladen...</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Algemene status:</span>
+                        <span class="font-medium flex items-center space-x-1" id="stoplicht-status">
+                            <span>Wordt geladen...</span>
+                        </span>
+                    </div>
+                </div>
+                
+                <button class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                    Open Stoplicht Dashboard
+                </button>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="header-card rounded-xl shadow-md p-6 mt-8">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Recente Activiteit</h3>
+            <div id="recent-activity" class="space-y-3">
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">QuickScan bijgewerkt</p>
+                        <p class="text-xs text-gray-500">Vandaag, 14:30</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">IBH controle voltooid</p>
+                        <p class="text-xs text-gray-500">Gisteren, 16:45</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">Nieuwe stoplicht data beschikbaar</p>
+                        <p class="text-xs text-gray-500">2 dagen geleden</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Auth and check authentication
+        let authService;
+        let currentUser;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if we have the global auth service
+            if (window.IBATAuth) {
+                authService = window.IBATAuth;
+            } else {
+                // Redirect to login if auth service not available
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Check authentication
+            if (!authService.isAuthenticated()) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            currentUser = authService.getCurrentUser();
+            
+            // Check if user has correct role
+            if (currentUser.role !== 'Compliance-Officer') {
+                alert('Toegang geweigerd. Deze pagina is alleen voor Compliance Officers.');
+                authService.logout();
+                window.location.href = 'login.html';
+                return;
+            }
+
+            initializePage();
+        });
+
+        function initializePage() {
+            // Update user info in header
+            document.getElementById('user-name').textContent = currentUser.name;
+            document.getElementById('user-directie').textContent = currentUser.directieName || 'Onbekende Directie';
+
+            // Load tool status data
+            loadToolStatuses();
+
+            // Setup event listeners
+            setupEventListeners();
+        }
+
+        function loadToolStatuses() {
+            // Load data from Purple Fish or other sources
+            const purpleFishData = localStorage.getItem('purpleFishDatabase');
+            let directieData = null;
+
+            if (purpleFishData) {
+                try {
+                    const data = JSON.parse(purpleFishData);
+                    directieData = data.directies.find(d => d.id === currentUser.directie);
+                } catch (e) {
+                    console.warn('Could not load Purple Fish data');
+                }
+            }
+
+            // Update IBH status
+            updateIBHStatus(directieData);
+            
+            // Update DRAAI status
+            updateDRAAIStatus(directieData);
+            
+            // Update QuickScan status
+            updateQuickScanStatus(directieData);
+            
+            // Update Stoplicht status
+            updateStoplichtStatus(directieData);
+        }
+
+        function updateIBHStatus(directieData) {
+            const lastUpdateEl = document.getElementById('ibh-last-update');
+            const complianceEl = document.getElementById('ibh-compliance');
+
+            if (directieData && directieData.ibh_kpis && directieData.ibh_kpis.last_updated) {
+                const updateDate = new Date(directieData.ibh_kpis.last_updated);
+                lastUpdateEl.textContent = updateDate.toLocaleDateString('nl-NL');
+                complianceEl.textContent = `${directieData.ibh_kpis.overall_ist}%`;
+                
+                // Color coding based on compliance score
+                const score = directieData.ibh_kpis.overall_ist;
+                if (score >= 80) {
+                    complianceEl.className = 'font-medium text-green-600';
+                } else if (score >= 60) {
+                    complianceEl.className = 'font-medium text-yellow-600';
+                } else {
+                    complianceEl.className = 'font-medium text-red-600';
+                }
+            } else {
+                lastUpdateEl.textContent = 'Geen data';
+                complianceEl.textContent = 'N.v.t.';
+                complianceEl.className = 'font-medium text-gray-500';
+            }
+        }
+
+        function updateDRAAIStatus(directieData) {
+            const projectsEl = document.getElementById('draai-projects');
+            const lastAssessmentEl = document.getElementById('draai-last-assessment');
+
+            // Simulate DRAAI data - in real implementation this would come from DRAAI tool data
+            projectsEl.textContent = '2 actief';
+            lastAssessmentEl.textContent = '5 dagen geleden';
+        }
+
+        function updateQuickScanStatus(directieData) {
+            const statusEl = document.getElementById('quickscan-status');
+            const bbnEl = document.getElementById('quickscan-bbn');
+
+            if (directieData && directieData.quickScanId) {
+                const purpleFishData = JSON.parse(localStorage.getItem('purpleFishDatabase'));
+                const quickScanData = purpleFishData.quickScanSimulations[directieData.quickScanId];
+                
+                if (quickScanData && quickScanData.introductie && quickScanData.introductie.processes.length > 0) {
+                    statusEl.textContent = 'Voltooid';
+                    statusEl.className = 'font-medium text-green-600';
+                    bbnEl.textContent = 'BBN2';
+                } else {
+                    statusEl.textContent = 'Niet gestart';
+                    statusEl.className = 'font-medium text-gray-600';
+                    bbnEl.textContent = 'N.v.t.';
+                }
+            } else {
+                statusEl.textContent = 'Geen data';
+                statusEl.className = 'font-medium text-gray-500';
+                bbnEl.textContent = 'N.v.t.';
+            }
+        }
+
+        function updateStoplichtStatus(directieData) {
+            const lastReportEl = document.getElementById('stoplicht-last-report');
+            const statusEl = document.getElementById('stoplicht-status');
+
+            lastReportEl.textContent = 'Vandaag';
+            
+            // Simulate traffic light status
+            const statuses = ['groen', 'geel', 'rood'];
+            const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            let statusHtml = '';
+            let statusText = '';
+            
+            switch(randomStatus) {
+                case 'groen':
+                    statusHtml = '<div class="w-3 h-3 bg-green-500 rounded-full"></div><span>Groen</span>';
+                    statusText = 'text-green-600';
+                    break;
+                case 'geel':
+                    statusHtml = '<div class="w-3 h-3 bg-yellow-500 rounded-full"></div><span>Geel</span>';
+                    statusText = 'text-yellow-600';
+                    break;
+                case 'rood':
+                    statusHtml = '<div class="w-3 h-3 bg-red-500 rounded-full"></div><span>Rood</span>';
+                    statusText = 'text-red-600';
+                    break;
+            }
+            
+            statusEl.innerHTML = statusHtml;
+            statusEl.className = `font-medium flex items-center space-x-1 ${statusText}`;
+        }
+
+        function setupEventListeners() {
+            // Logout button
+            document.getElementById('logout-btn').addEventListener('click', () => {
+                if (confirm('Weet u zeker dat u wilt uitloggen?')) {
+                    authService.logout();
+                    window.location.href = 'login.html';
+                }
+            });
+
+            // Tool cards
+            document.querySelectorAll('.tool-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const toolName = card.dataset.tool;
+                    if (!card.classList.contains('disabled')) {
+                        openTool(toolName);
+                    }
+                });
+            });
+        }
+
+        function openTool(toolName) {
+            const directieParam = `directie=${encodeURIComponent(currentUser.directie)}`;
+            
+            switch(toolName) {
+                case 'ibh':
+                    window.open(`ibh.html?${directieParam}`, '_blank');
+                    break;
+                case 'draai':
+                    window.open(`Draai V4.html?${directieParam}`, '_blank');
+                    break;
+                case 'quickscan':
+                    window.open(`Quickscan V2.html?directie=${encodeURIComponent(currentUser.directie)}`, '_blank');
+                    break;
+                case 'stoplicht':
+                    // For now, show a message that this tool is in development
+                    alert('Stoplicht Rapportage is momenteel in ontwikkeling. Binnenkort beschikbaar!');
+                    break;
+                default:
+                    alert('Tool niet gevonden');
+            }
+        }
+
+        // Global function to handle authentication across tools
+        window.getIBATAuth = function() {
+            return authService;
+        };
+
+        // Global logout function
+        window.ibatLogout = function() {
+            if (confirm('Weet u zeker dat u wilt uitloggen?')) {
+                authService.logout();
+                window.location.href = 'login.html';
+            }
+        };
+    </script>
+</body>
+</html>
